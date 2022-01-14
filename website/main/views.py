@@ -1,7 +1,10 @@
 from django.shortcuts import render
+from .models import CodeSnippet
 
 # Create your views here.
 
 
 def home(request):
-    return render(request, "home.html")
+    snippets = list(CodeSnippet.objects.all())
+    snippets.sort(key=lambda x: x.date_created, reverse=True)
+    return render(request, "home.html", {"code_snippets": snippets})

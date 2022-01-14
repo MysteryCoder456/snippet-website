@@ -5,5 +5,15 @@
 {% endblock title %}
 
 {% block main %}
-    <h4>The Latest Code Snippets</h4>
+    <h3>The Latest Code Snippets</h3>
+
+    {% for snippet in code_snippets %}
+        <hr>
+        <div class="code-snippet">
+            <span class="display-5">{{ snippet.title }}</span>
+            <small class="text-muted ms-1">By {{ snippet.author.username }}</small>
+            <small class="text-muted">on {{ snippet.date_created|date:"d M Y P" }}</small>
+            <pre><code class="text-white mt-2">{{ snippet.code }}</code></pre>
+        </div>
+    {% endfor %}
 {% endblock main %}
