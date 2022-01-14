@@ -1,0 +1,28 @@
+body {
+    background-color: gainsboro;
+}
+
+nav {
+    background-color: crimson;
+    color: whitesmoke;
+}
+
+main {
+    padding-top: 70px;
+    padding-bottom: 7px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px 5px darkgray;
+}
+
+.nav-link {
+    color: whitesmoke;
+}
+
+.nav-link:hover {
+    color: darkgrey;
+}
+
+.auth-links {
+    margin-left: auto;
+}
