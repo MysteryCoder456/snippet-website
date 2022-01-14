@@ -13,6 +13,9 @@
             <span class="display-5">{{ snippet.title }}</span>
             <small class="text-muted ms-1">By {{ snippet.author.username }}</small>
             <small class="text-muted">on {{ snippet.date_created|date:"d M Y P" }}</small>
+
+            <br>
+            <span class="text-muted">Language: {{ snippet.language.capitalize }}</span>
             <pre><code class="text-white mt-2">{{ snippet.code }}</code></pre>
         </div>
     {% endfor %}
