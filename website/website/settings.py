@@ -28,7 +28,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = int(os.environ["DEBUG"]) != 0
+DEBUG = os.environ["DEBUG"]
 
 ALLOWED_HOSTS = ["snippet.tk"]
 
@@ -124,6 +124,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
+STATIC_ROOT = "/static/"
 STATIC_URL = "static/"
 
 # Default primary key field type
