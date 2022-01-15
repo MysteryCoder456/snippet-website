@@ -1,4 +1,4 @@
-{% extends 'base_template.html' %}
+{% extends 'main/base_template.html' %}
 
 {% block title %}
     Home
@@ -8,8 +8,7 @@
     <h3>The Latest Code Snippets</h3>
 
     {% for snippet in code_snippets %}
-        <hr>
-        <div class="code-snippet">
+        <div class="code-snippet pt-3 border-top">
             <span class="display-5">{{ snippet.title }}</span>
             <small class="text-muted ms-1">
                 By {{ snippet.author.username }}

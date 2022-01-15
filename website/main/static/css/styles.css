@@ -1,5 +1,13 @@
 body {
     background-color: gainsboro;
+
+    /* Hide scroll bars */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+body::-webkit-scrollbar {
+    display: none;
 }
 
 nav {
@@ -9,7 +17,6 @@ nav {
 
 main {
     padding-top: 70px;
-    padding-bottom: 10px;
     margin-bottom: 50px;
     background-color: white;
     border-radius: 10px;

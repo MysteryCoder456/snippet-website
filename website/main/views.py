@@ -7,4 +7,4 @@ from .models import CodeSnippet
 def home(request):
     snippets = list(CodeSnippet.objects.all())
     snippets.sort(key=lambda x: x.date_created, reverse=True)
-    return render(request, "home.html", {"code_snippets": snippets})
+    return render(request, "main/home.html", {"code_snippets": snippets})

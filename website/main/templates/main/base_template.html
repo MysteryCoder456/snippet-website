@@ -34,19 +34,29 @@
                     </div>
 
                     <div class="navbar-nav ms-auto">
-                        <a href="#" class="nav-link">Login</a>
-                        <a href="#" class="nav-link">Register</a>
+                        <a href="{% url 'login' %}" class="nav-link">Login</a>
+                        <a href="{% url 'register' %}" class="nav-link">Register</a>
                     </div>
                 </div>
             </div>
         </nav>
 
-        <main role="main" class="container col-md-9">
+        <main role="main" class="container col-md-9 pb-2">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             {% block main %}{% endblock main %}
         </main>
 
         <!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+        <!-- Run highlight.js -->
         <script>hljs.highlightAll();</script>
     </body>
 
