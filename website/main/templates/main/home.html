@@ -11,7 +11,7 @@
         <div class="code-snippet pt-3 border-top">
             <span class="display-5">{{ snippet.title }}</span>
             <small class="text-muted ms-1">
-                By {{ snippet.author.username }}
+                By <a href="{% url 'profile' user_id=snippet.author_id %}">{{ snippet.author.username }}</a>
                 on {{ snippet.date_created|date:"d M Y P" }}
             </small>
 

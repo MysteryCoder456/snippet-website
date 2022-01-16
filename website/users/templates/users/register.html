@@ -6,9 +6,9 @@
 {% endblock title %}
 
 {% block main %}
-    <h3>Join Snippet Today</h3>
+    <h3 class="pb-3 border-bottom">Join Snippet Today</h3>
 
-    <form method="POST" class="pt-3 border-top">
+    <form method="POST">
         {% csrf_token %}
         <fieldset class="form-group">
             {{ form|crispy }}

@@ -1,0 +1,45 @@
+{% extends 'main/base_template.html' %}
+
+{% block title %}
+    Profile
+{% endblock title %}
+
+{% block main %}
+    <h3>{{ requested_user.username }}'s Profile</h3>
+
+    {% if latest_snippet %}
+        <div class="pt-3 border-top">
+            <h4>Latest Snippet:</h4>
+            <div class="code-snippet">
+                <span class="display-5">{{ latest_snippet.title }}</span>
+                <small class="text-muted ms-1">
+                    on {{ latest_snippet.date_created|date:"d M Y P" }}
+                </small>
+
+                <br>
+                <span class="text-muted">
+                    Language: {{ latest_snippet.language.capitalize }}
+                </span>
+                <pre><code class="text-white language-{{ latest_snippet.language.lower }} mt-2">{{ latest_snippet.code }}</code></pre>
+            </div>
+        </div>
+
+        <div class="pt-3 border-top">
+            <h4>First Snippet:</h4>
+            <div class="code-snippet">
+                <span class="display-5">{{ first_snippet.title }}</span>
+                <small class="text-muted ms-1">
+                    on {{ first_snippet.date_created|date:"d M Y P" }}
+                </small>
+
+                <br>
+                <span class="text-muted">
+                    Language: {{ first_snippet.language.capitalize }}
+                </span>
+                <pre><code class="text-white language-{{ first_snippet.language.lower }} mt-2">{{ first_snippet.code }}</code></pre>
+            </div>
+        </div>
+    {% else %}
+        <p>Doesn't seem like this person uses this site much...</p>
+    {% endif %}
+{% endblock main %}
