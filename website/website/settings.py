@@ -31,6 +31,8 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 DEBUG = os.environ["DEBUG"] == "True"
 
 ALLOWED_HOSTS = ["snippet.tk", "django"]
+if DEBUG:
+    ALLOWED_HOSTS.append("127.0.0.1")
 
 
 # Application definition
@@ -135,9 +137,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = not DEBUG
 
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG
 
-CSRF_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = ["https://snippet.tk"]
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_TRUSTED_ORIGINS = [] if DEBUG else ["https://snippet.tk"]
