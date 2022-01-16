@@ -5,10 +5,6 @@ from .forms import UserRegisterForm
 # Create your views here.
 
 
-def login(request):
-    ...
-
-
 def register(request):
     if request.method == "POST":
         form = UserRegisterForm(request.POST)
@@ -20,7 +16,7 @@ def register(request):
                 request,
                 f"Welcome {username}! Your account has been created.",
             )
-            return redirect("home")
+            return redirect("login")
 
     else:
         form = UserRegisterForm()

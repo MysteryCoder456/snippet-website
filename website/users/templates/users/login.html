@@ -2,11 +2,11 @@
 {% load crispy_forms_tags %}
 
 {% block title %}
-    Create an Account
+    Login
 {% endblock title %}
 
 {% block main %}
-    <h3>Join Snippet Today</h3>
+    <h3>Log in to get more out of Snippet</h3>
 
     <form method="POST" class="pt-3 border-top">
         {% csrf_token %}
@@ -16,15 +16,15 @@
 
         <div class="form-group">
             <button class="btn btn-outline-primary" type="submit">
-                Sign Up
+                Login
             </button>
         </div>
     </form>
 
     <div class="mt-3 pt-1 border-top">
         <small>
-            <a href="{% url 'login' %}" class="text-muted ms-2">
-                Already have an account?
+            <a href="{% url 'register' %}" class="text-muted ms-2">
+                Don't have an account?
             </a>
         </small>
     </div>

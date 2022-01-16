@@ -1,0 +1,17 @@
+{% extends 'main/base_template.html' %}
+
+{% block title %}
+    You have been logged out.
+{% endblock title %}
+
+{% block main %}
+    <h3>You have been logged out of your account</h3>
+
+    <div class="mt-3 pt-1 border-top">
+        <small>
+            <a href="{% url 'login' %}" class="text-muted ms-2">
+                Log in again
+            </a>
+        </small>
+    </div>
+{% endblock main %}
