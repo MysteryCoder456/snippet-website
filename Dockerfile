@@ -6,7 +6,6 @@ COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY ./website /app
-
 WORKDIR /app
 
 COPY ./entrypoint.sh /
