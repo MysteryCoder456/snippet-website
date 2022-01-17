@@ -16,7 +16,7 @@ services:
         build: ./nginx
         volumes:
             - static:/static
-            - site_media:./website/site_media
+            - site_media:/app/site_media
         ports:
             - "8050:8050"
         depends_on:
