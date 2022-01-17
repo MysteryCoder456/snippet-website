@@ -139,8 +139,8 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 LOGIN_REDIRECT_URL = "home"
 
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "site_media"
+MEDIA_URL = "/site_media/"
 
 SECURE_SSL_REDIRECT = not DEBUG
 

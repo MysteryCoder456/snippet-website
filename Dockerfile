@@ -7,7 +7,7 @@ RUN pip install --upgrade pip
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
-RUN mkdir -p ./website/media
+RUN mkdir -p ./website/site_media
 RUN mkdir -p ./website/db
 
 COPY ./website /app
