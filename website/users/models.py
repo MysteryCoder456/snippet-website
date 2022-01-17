@@ -6,8 +6,8 @@ from django.contrib.auth.models import User
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    bio = models.CharField(max_length=200)
-    occupation = models.CharField(max_length=25)
+    bio = models.CharField(max_length=200, default="Hi there! I like coding.")
+    occupation = models.CharField(max_length=25, default="Cool Coder")
     image = models.ImageField(
         default="profile_pics/default.png", upload_to="profile_pics"
     )

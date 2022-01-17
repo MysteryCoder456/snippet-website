@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import HttpRequest
 from .forms import UserRegisterForm
+from .models import Profile
 
 # Create your views here.
 
@@ -13,6 +14,8 @@ def register(request: HttpRequest):
 
         if form.is_valid():
             form.save()
+            new_profile = Profile(user=form.instance)
+            new_profile.save()
             username = form.cleaned_data["username"]
             messages.success(
                 request,
