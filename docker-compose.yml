@@ -5,7 +5,6 @@ services:
         volumes:
             - static:/static
             - db:/app/db
-            - site_media:/app/site_media
         env_file:
             - .env
         build:
@@ -17,6 +16,7 @@ services:
         build: ./nginx
         volumes:
             - static:/static
+            - site_media:./website/site_media
         ports:
             - "8050:8050"
         depends_on:
