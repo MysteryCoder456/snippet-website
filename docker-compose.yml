@@ -5,6 +5,7 @@ services:
         volumes:
             - static:/static
             - db:/app/db
+            - media:/app/media
         env_file:
             - .env
         build:
@@ -24,3 +25,4 @@ services:
 volumes:
     static:
     db:
+    media:

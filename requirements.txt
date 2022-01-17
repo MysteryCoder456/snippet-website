@@ -1,6 +1,7 @@
 django
 django-crispy-forms
 crispy-bootstrap5
+Pillow
 gunicorn
 python-dotenv
 flake8

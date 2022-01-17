@@ -5,9 +5,14 @@
 {% endblock title %}
 
 {% block main %}
-    <h3>{{ requested_user.username }}'s Profile</h3>
+    <div class="media pt-3 text-center">
+        <img class="rounded-circle profile-pic" src="{{ requested_user.profile.image.url }}" alt="{{ requested_user.username }}'s Profile Picture">
+        <p class="display-2 mt-2">{{ requested_user.username }}</p>
+        <p><strong>Occupation:</strong> {{ requested_user.profile.occupation }}</p>
+        <p>{{ requested_user.profile.bio }}</p>
+    </div>
 
-    {% if latest_snippet %}
+    {% if latest_snippet and first_snippet %}
         <div class="pt-3 border-top">
             <h4>Latest Snippet:</h4>
             <div class="code-snippet">
@@ -40,6 +45,6 @@
             </div>
         </div>
     {% else %}
-        <p>Doesn't seem like this person uses this site much...</p>
+        <p class="text-center pt-3 border-top">Doesn't seem like this person uses this site much...</p>
     {% endif %}
 {% endblock main %}
