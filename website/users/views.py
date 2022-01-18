@@ -8,6 +8,8 @@ from .forms import UserRegisterForm
 
 
 def register(request: HttpRequest):
+    form = UserRegisterForm()
+
     if request.method == "POST":
         form = UserRegisterForm(request.POST)
 
@@ -19,9 +21,6 @@ def register(request: HttpRequest):
                 f"Welcome {username}! Your account has been created.",
             )
             return redirect("login")
-
-    else:
-        form = UserRegisterForm()
 
     return render(request, "users/register.html", {"form": form})
 
