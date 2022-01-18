@@ -138,6 +138,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 LOGIN_REDIRECT_URL = "home"
+LOGIN_URL = "/users/login/"
 
 MEDIA_ROOT = BASE_DIR / "site_media"
 MEDIA_URL = "/site_media/"
