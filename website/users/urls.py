@@ -16,4 +16,5 @@ urlpatterns = [
     ),
     path("register/", views.register, name="register"),
     path("profile/<int:user_id>", views.profile, name="profile"),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
 ]

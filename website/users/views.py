@@ -1,8 +1,11 @@
+import os
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest
-from .forms import UserRegisterForm
+from .forms import ProfileUpdateForm, UserRegisterForm
+from .models import Profile
 
 # Create your views here.
 
@@ -43,3 +46,26 @@ def profile(request: HttpRequest, user_id: int):
             "latest_snippet": latest_snippet,
         },
     )
+
+
+@login_required
+def edit_profile(request: HttpRequest):
+    form = ProfileUpdateForm(instance=request.user.profile)
+
+    if request.method == "POST":
+        previous_image = request.user.profile.image
+        form = ProfileUpdateForm(
+            request.POST, request.FILES, instance=request.user.profile
+        )
+
+        if form.is_valid():
+            form.save()
+
+            # Delete previous image
+            if previous_image.name != Profile.default_image_name:
+                os.remove(previous_image.path)
+
+            messages.success(request, "Profile updated successfully!")
+            return redirect("profile", user_id=request.user.id)
+
+    return render(request, "users/edit_profile.html", {"form": form})
