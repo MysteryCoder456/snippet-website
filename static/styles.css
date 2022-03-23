@@ -1,0 +1,42 @@
+body {
+    background-color: gainsboro;
+
+    /* Hide scroll bars */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+nav {
+    background-color: crimson;
+    color: whitesmoke;
+}
+
+main {
+    padding-top: 70px;
+    margin-bottom: 50px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px 5px darkgray;
+}
+
+code {
+    border-radius: 5px;
+}
+
+.nav-link {
+    color: whitesmoke;
+}
+
+.nav-link:hover {
+    color: darkgrey;
+}
+
+.profile-pic {
+    width: 20%;
+    aspect-ratio: 1;
+    box-shadow: 0 0 15px 2px black;
+}
