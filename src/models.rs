@@ -1,16 +1,64 @@
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
+fn generate_salt() -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(8)
+        .map(char::from)
+        .collect()
+}
+
+fn generate_hash(password: String, salt: String) -> String {
+    let mut hash = sha256::digest(password + salt.as_str());
+
+    // 5 rounds of SHA256 hashing
+    for _ in 0..5 {
+        hash = sha256::digest(hash);
+    }
+
+    hash
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct User {
-    id: i32,
-    username: String,
-    email: String,
-    passwd: String,
-    created_at: i64,
+    pub id: i32,
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    pub created_at: i64,
 }
 
 impl User {
+    pub async fn create(pool: &PgPool, username: String, email: String, password: String) -> User {
+        let salt = generate_salt();
+        let hashed_password = generate_hash(password.clone(), salt.clone());
+
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO users (username, email, passwd, salt)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+            "#,
+            username,
+            email,
+            hashed_password,
+            salt
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+
+        User {
+            id: result.id,
+            username: result.username,
+            email: result.email,
+            password: result.passwd,
+            created_at: result.created_at.timestamp(),
+        }
+    }
+
     pub async fn from_id(pool: &PgPool, id: i32) -> Option<User> {
         let result = sqlx::query!("SELECT * FROM users WHERE id = $1", id)
             .fetch_one(pool)
@@ -21,21 +69,21 @@ impl User {
             id: result.id,
             username: result.username,
             email: result.email,
-            passwd: result.passwd,
-            created_at: result.created_at?.timestamp(),
+            password: result.passwd,
+            created_at: result.created_at.timestamp(),
         })
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct CodeSnippet {
-    id: i32,
-    author: User,
-    title: String,
-    code: String,
-    language: String,
-    created_at: i64,
-    updated_at: i64,
+    pub id: i32,
+    pub author: User,
+    pub title: String,
+    pub code: String,
+    pub language: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 impl CodeSnippet {
@@ -59,7 +107,7 @@ impl CodeSnippet {
                 title: record.title,
                 code: record.code,
                 language: record.lang.unwrap(),
-                created_at: record.created_at.unwrap().timestamp(),
+                created_at: record.created_at.timestamp(),
                 updated_at,
             });
         }

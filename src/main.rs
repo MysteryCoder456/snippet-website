@@ -4,10 +4,12 @@ use rocket::{fs::FileServer, routes, State};
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
-mod models;
-
 #[macro_use]
 extern crate rocket;
+
+mod api;
+mod forms;
+mod models;
 
 struct DBState {
     pool: PgPool,
@@ -33,9 +35,12 @@ async fn rocket() -> _ {
         .await
         .unwrap();
 
-    rocket::build()
+    let mut app = rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
         .mount("/", routes![index])
-        .mount("/static", FileServer::from("static"))
+        .mount("/static", FileServer::from("static"));
+
+    app = api::mount_routes(app);
+    app
 }

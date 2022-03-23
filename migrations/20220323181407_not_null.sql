@@ -1,0 +1,4 @@
+-- Make TIMESTAMP fields NOT NULL
+
+ALTER TABLE users ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE code_snippets ALTER COLUMN created_at SET NOT NULL;
