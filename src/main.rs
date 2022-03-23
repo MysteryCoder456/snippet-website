@@ -18,7 +18,7 @@ async fn index(db_state: &State<DBState>) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
 
-    let ctx: HashMap<&str, Vec<_>> = HashMap::from_iter([("code_snippets", snippets)]);
+    let ctx: HashMap<&str, _> = HashMap::from_iter([("code_snippets", snippets)]);
     Template::render("home", ctx)
 }
 
