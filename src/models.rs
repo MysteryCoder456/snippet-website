@@ -14,7 +14,7 @@ fn generate_hash(password: String, salt: String) -> String {
     let mut hash = sha256::digest(password + salt.as_str());
 
     // 5 rounds of SHA256 hashing
-    for _ in 0..5 {
+    for _ in 1..=5 {
         hash = sha256::digest(hash);
     }
 
@@ -28,10 +28,12 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub created_at: i64,
+    pub salt: String,
 }
 
 impl User {
     pub async fn create(pool: &PgPool, username: String, email: String, password: String) -> User {
+        let (username, email) = (username.trim(), email.trim());
         let salt = generate_salt();
         let hashed_password = generate_hash(password.clone(), salt.clone());
 
@@ -39,7 +41,7 @@ impl User {
             r#"
             INSERT INTO users (username, email, passwd, salt)
             VALUES ($1, $2, $3, $4)
-            RETURNING *
+            RETURNING id, created_at
             "#,
             username,
             email,
@@ -50,12 +52,14 @@ impl User {
         .await
         .unwrap();
 
+        // TODO: Make a function to get user from row
         User {
             id: result.id,
-            username: result.username,
-            email: result.email,
-            password: result.passwd,
+            username: username.to_owned(),
+            email: email.to_owned(),
+            password,
             created_at: result.created_at.timestamp(),
+            salt,
         }
     }
 
@@ -71,6 +75,7 @@ impl User {
             email: result.email,
             password: result.passwd,
             created_at: result.created_at.timestamp(),
+            salt: result.salt,
         })
     }
 }

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+#[macro_use]
+extern crate rocket;
+
 use rocket::{fs::FileServer, routes, State};
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-
-#[macro_use]
-extern crate rocket;
 
 mod api;
 mod forms;
