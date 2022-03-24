@@ -7,9 +7,34 @@
 {% block main %}
     <h3 class="pb-3 border-bottom">Join Snippet Today</h3>
 
-    <form action="/api/register" method="POST">
+    {% if errors | length > 1 %}
+        {% for error in errors %}
+            <small class="alert alert-danger">
+                {{ error }}
+            </small>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
         <fieldset class="form-group">
-            {{ form }}
+            <div class="row">
+                <div class="col">
+                    <input label="Name", type="text", name="username" />
+                </div>
+                <div class="col">
+                    <input label="Email Address", type="text", name="email" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <input label="Password", type="password", name="password" />
+                </div>
+
+                <div class="col">
+                    <input label="Confirm Password", type="password",  name="confirm_password" />
+                </div>
+            </div>
         </fieldset>
 
         <div class="form-group">

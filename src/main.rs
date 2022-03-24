@@ -1,13 +1,17 @@
-use std::collections::HashMap;
-
 #[macro_use]
 extern crate rocket;
 
-use rocket::{fs::FileServer, routes, State};
+use std::collections::HashMap;
+
+use rocket::{
+    form::{Context, Contextual, Form},
+    fs::FileServer,
+    http::Status,
+    routes, State,
+};
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
-mod api;
 mod forms;
 mod models;
 
@@ -24,6 +28,32 @@ async fn index(db_state: &State<DBState>) -> Template {
     Template::render("home", ctx)
 }
 
+#[get("/register")]
+fn register() -> Template {
+    Template::render("register", &Context::default())
+}
+
+#[post("/register", data = "<form>")]
+async fn register_api(
+    form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
+    db_state: &State<DBState>,
+) -> (Status, Template) {
+    if let Some(ref register_user) = form.value {
+        let pool = &db_state.pool;
+
+        let username = register_user.username.to_owned();
+        let email = register_user.email.to_owned();
+        let password = register_user.password.to_owned();
+
+        models::User::create(pool, username, email, password).await;
+    }
+
+    (
+        form.context.status(),
+        Template::render("register", &form.context),
+    )
+}
+
 #[launch]
 async fn rocket() -> _ {
     dotenv::dotenv().ok();
@@ -35,12 +65,9 @@ async fn rocket() -> _ {
         .await
         .unwrap();
 
-    let mut app = rocket::build()
+    rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
-        .mount("/", routes![index])
-        .mount("/static", FileServer::from("static"));
-
-    app = api::mount_routes(app);
-    app
+        .mount("/", routes![index, register, register_api])
+        .mount("/static", FileServer::from("static"))
 }
