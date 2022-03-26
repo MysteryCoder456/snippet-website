@@ -48,7 +48,7 @@ impl User {
         if let Ok(user) = result {
             (user.username != username, user.email != email)
         } else {
-            (false, false)
+            (true, true)
         }
     }
 

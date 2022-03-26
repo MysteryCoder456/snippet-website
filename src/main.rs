@@ -38,35 +38,37 @@ async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
 ) -> (Status, Template) {
-    if let Some(ref register_user) = form.value {
-        let pool = &db_state.pool;
+    let template = match form.value {
+        Some(ref register_user) => {
+            let pool = &db_state.pool;
 
-        let username = register_user.username;
-        let email = register_user.email;
-        let password = register_user.password;
+            let username = register_user.username;
+            let email = register_user.email;
+            let password = register_user.password;
 
-        let (username_valid, email_valid) = models::User::verify(pool, username, email).await;
+            let (username_valid, email_valid) = models::User::verify(pool, username, email).await;
 
-        if !username_valid {
-            let error = Error::validation("Username already taken").with_name("username");
-            form.context.push_error(error);
+            if !username_valid {
+                let error = Error::validation("Username already taken").with_name("username");
+                form.context.push_error(error);
+            }
+
+            if !email_valid {
+                let error = Error::validation("Email already being used").with_name("email");
+                form.context.push_error(error);
+            }
+
+            if username_valid && email_valid {
+                models::User::create(pool, username, email, password).await;
+                index(db_state).await
+            } else {
+                Template::render("register", &form.context)
+            }
         }
+        None => Template::render("register", &form.context),
+    };
 
-        if !email_valid {
-            let error =
-                Error::validation("Email is being used for another account").with_name("email");
-            form.context.push_error(error);
-        }
-
-        if username_valid && email_valid {
-            models::User::create(pool, username, email, password).await;
-        }
-    }
-
-    (
-        form.context.status(),
-        Template::render("register", &form.context),
-    )
+    (form.context.status(), template)
 }
 
 #[launch]
