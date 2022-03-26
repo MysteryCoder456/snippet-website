@@ -10,8 +10,8 @@ fn generate_salt() -> String {
         .collect()
 }
 
-fn generate_hash(password: String, salt: String) -> String {
-    let mut hash = sha256::digest(password + salt.as_str());
+fn generate_hash(password: &str, salt: &str) -> String {
+    let mut hash = sha256::digest(password.to_owned() + salt);
 
     // 5 rounds of SHA256 hashing
     for _ in 1..=5 {
@@ -32,10 +32,30 @@ pub struct User {
 }
 
 impl User {
-    pub async fn create(pool: &PgPool, username: String, email: String, password: String) -> User {
+    pub async fn verify(pool: &PgPool, username: &str, email: &str) -> (bool, bool) {
+        let result = sqlx::query!(
+            r#"
+                SELECT *
+                FROM users
+                WHERE username = $1 OR email = $2
+            "#,
+            username,
+            email
+        )
+        .fetch_one(pool)
+        .await;
+
+        if let Ok(user) = result {
+            (user.username != username, user.email != email)
+        } else {
+            (false, false)
+        }
+    }
+
+    pub async fn create(pool: &PgPool, username: &str, email: &str, password: &str) -> User {
         let (username, email) = (username.trim(), email.trim());
         let salt = generate_salt();
-        let hashed_password = generate_hash(password.clone(), salt.clone());
+        let hashed_password = generate_hash(password, salt.as_str());
 
         let result = sqlx::query!(
             r#"
@@ -57,7 +77,7 @@ impl User {
             id: result.id,
             username: username.to_owned(),
             email: email.to_owned(),
-            password,
+            password: password.to_owned(),
             created_at: result.created_at.timestamp(),
             salt,
         }

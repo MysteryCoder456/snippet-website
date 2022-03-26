@@ -1,3 +1,4 @@
+{% import "macros" as m %}
 {% extends "base_template" %}
 
 {% block title %}
@@ -7,33 +8,31 @@
 {% block main %}
     <h3 class="pb-3 border-bottom">Join Snippet Today</h3>
 
-    {% if errors | length > 1 %}
-        {% for error in errors %}
-            <small class="alert alert-danger">
-                {{ error }}
-            </small>
-        {% endfor %}
-    {% endif %}
+    {# {% if errors | length > 1 %}
+        <small class="alert alert-danger">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error.msg }}</li>
+                {% endfor %}
+            </ul>
+        </small>
+    {% endif %} #}
 
     <form method="POST">
         <fieldset class="form-group">
-            <div class="row">
-                <div class="col">
-                    <input label="Name", type="text", name="username" />
-                </div>
-                <div class="col">
-                    <input label="Email Address", type="text", name="email" />
-                </div>
+            <div class="mb-3">
+                {{ m::input(label="Username", type="text", name="username") }}
+            </div>
+            <div class="mb-3">
+                {{ m::input(label="Email Address", type="text", name="email") }}
             </div>
 
-            <div class="row">
-                <div class="col">
-                    <input label="Password", type="password", name="password" />
-                </div>
+            <div class="mb-3">
+                {{ m::input(label="Password", type="password", name="password") }}
+            </div>
 
-                <div class="col">
-                    <input label="Confirm Password", type="password",  name="confirm_password" />
-                </div>
+            <div class="mb-3">
+                {{ m::input(label="Confirm Password", type="password", name="confirm_password") }}
             </div>
         </fieldset>
 

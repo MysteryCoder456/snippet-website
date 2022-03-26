@@ -1,0 +1,26 @@
+{% macro value_for(name) %}
+    {%- if name in values -%}
+        {{- values | get(key=name) | first -}}
+    {%- endif -%}
+{% endmacro %}
+
+{% macro input(type, label, name, value="") %}
+
+    <label for="id_{{ name | lower }}" class="form-label requiredField">{{ label }}</label>
+    <input type="{{ type }}" name="{{ name }}" autofocus class="textinput textInput form-control {% if name in errors %} is-invalid {% endif %}" id="id_{{ name | lower }}" value="{% if type != 'password' %} {{- self::value_for(name=name) -}} {% endif %}">
+
+    {% if name in errors %}
+
+        {% set field_errors = errors | get(key=name) %}
+        {% set field_errors_len = field_errors | length %}
+
+        {% for i in range(end=field_errors_len) %}
+            {% set error = field_errors | nth(n=i) %}
+            <p id="error_{{ i + 1 }}_id_{{ name | lower }}" class="invalid-feedback">
+                <strong>{{ error.msg }}</strong>
+            </p>
+        {% endfor %}
+
+    {% endif %}
+
+{% endmacro input %}

@@ -4,7 +4,7 @@ extern crate rocket;
 use std::collections::HashMap;
 
 use rocket::{
-    form::{Context, Contextual, Form},
+    form::{Context, Contextual, Error, Form},
     fs::FileServer,
     http::Status,
     routes, State,
@@ -24,7 +24,7 @@ async fn index(db_state: &State<DBState>) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
 
-    let ctx: HashMap<&str, _> = HashMap::from_iter([("code_snippets", snippets)]);
+    let ctx: HashMap<_, _> = HashMap::from_iter([("code_snippets", snippets)]);
     Template::render("home", ctx)
 }
 
@@ -35,17 +35,32 @@ fn register() -> Template {
 
 #[post("/register", data = "<form>")]
 async fn register_api(
-    form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
+    mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
 ) -> (Status, Template) {
     if let Some(ref register_user) = form.value {
         let pool = &db_state.pool;
 
-        let username = register_user.username.to_owned();
-        let email = register_user.email.to_owned();
-        let password = register_user.password.to_owned();
+        let username = register_user.username;
+        let email = register_user.email;
+        let password = register_user.password;
 
-        models::User::create(pool, username, email, password).await;
+        let (username_valid, email_valid) = models::User::verify(pool, username, email).await;
+
+        if !username_valid {
+            let error = Error::validation("Username already taken").with_name("username");
+            form.context.push_error(error);
+        }
+
+        if !email_valid {
+            let error =
+                Error::validation("Email is being used for another account").with_name("email");
+            form.context.push_error(error);
+        }
+
+        if username_valid && email_valid {
+            models::User::create(pool, username, email, password).await;
+        }
     }
 
     (
