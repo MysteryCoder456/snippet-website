@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
-    http::Status,
-    routes, State,
+    http::{Status, CookieJar, Cookie},
+    routes, State, response::Redirect,
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -37,8 +37,8 @@ fn register() -> Template {
 async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
-) -> (Status, Template) {
-    let template: Template = match form.value {
+) -> Result<Redirect, Template> {
+    match form.value {
         Some(ref register_user) => {
             let pool = &db_state.pool;
 
@@ -60,15 +60,13 @@ async fn register_api(
 
             if username_valid && email_valid {
                 models::User::create(pool, username, email, password).await;
-                login()
+                Ok(Redirect::to(uri!(login)))
             } else {
-                Template::render("register", &form.context)
+                Err(Template::render("register", &form.context))
             }
         }
-        None => Template::render("register", &form.context),
-    };
-
-    (form.context.status(), template)
+        None => Err(Template::render("register", &form.context)),
+    }
 }
 
 #[get("/login")]
@@ -77,8 +75,12 @@ fn login() -> Template {
 }
 
 #[post("/login", data = "<form>")]
-async fn login_api(mut form: Form<Contextual<'_, forms::LoginForm<'_>>>, db_state: &State<DBState>) -> (Status, Template) {
-    let template: Template = match form.value {
+async fn login_api(
+    mut form: Form<Contextual<'_, forms::LoginForm<'_>>>,
+    db_state: &State<DBState>,
+    cookie_jar: &CookieJar<'_>
+) -> Result<Redirect, Template> {
+    match form.value {
         Some(ref login_user) => {
             let pool = &db_state.pool;
 
@@ -87,18 +89,21 @@ async fn login_api(mut form: Form<Contextual<'_, forms::LoginForm<'_>>>, db_stat
 
             let auth_result = models::User::authenticate(pool, username, password).await;
 
-            if let Err((name, error)) = auth_result {
-                let e = Error::validation(error).with_name(name);
-                form.context.push_error(e);
-                Template::render("login", &form.context)
-            } else {
-                index(db_state).await
+            match auth_result {
+                Ok(user_id) => {
+                    let auth_cookie = Cookie::new("current_user", user_id.to_string());
+                    cookie_jar.add_private(auth_cookie);
+                    Ok(Redirect::to(uri!(index)))
+                }
+                Err((name, error)) => {
+                    let e = Error::validation(error).with_name(name);
+                    form.context.push_error(e);
+                    Err(Template::render("login", &form.context))
+                }
             }
         }
-        None => Template::render("login", &form.context)
-    };
-
-    (form.context.status(), template)
+        None => Err(Template::render("login", &form.context)),
+    }
 }
 
 #[launch]
@@ -115,6 +120,9 @@ async fn rocket() -> _ {
     rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
-        .mount("/", routes![index, register, register_api, login, login_api])
+        .mount(
+            "/",
+            routes![index, register, register_api, login, login_api],
+        )
         .mount("/static", FileServer::from("static"))
 }

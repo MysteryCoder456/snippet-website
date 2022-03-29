@@ -1,4 +1,5 @@
 use rand::{distributions::Alphanumeric, Rng};
+use rocket::{request::{FromRequest, Outcome, Request}, response::Redirect, outcome::IntoOutcome, http::Status};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
@@ -32,15 +33,24 @@ pub struct User {
 }
 
 impl User {
-    pub async fn authenticate(pool: &PgPool, username: &str, password: &str) -> Result<String, (&'static str, &'static str)> {
-        let result = sqlx::query!(r#"SELECT salt, passwd FROM users WHERE username = $1"#, username).fetch_one(pool).await;
+    pub async fn authenticate(
+        pool: &PgPool,
+        username: &str,
+        password: &str,
+    ) -> Result<i32, (&'static str, &'static str)> {
+        let result = sqlx::query!(
+            r#"SELECT id, salt, passwd FROM users WHERE username = $1"#,
+            username
+        )
+        .fetch_one(pool)
+        .await;
 
         if let Ok(record) = result {
             let salt = record.salt.as_str();
             let hashed = generate_hash(password, salt);
 
             if hashed == record.passwd {
-                Ok("Logged in!".to_owned())
+                Ok(record.id)
             } else {
                 Err(("password", "Incorrect password"))
             }
@@ -69,7 +79,7 @@ impl User {
         }
     }
 
-    pub async fn create(pool: &PgPool, username: &str, email: &str, password: &str) -> User {
+    pub async fn create(pool: &PgPool, username: &str, email: &str, password: &str) -> Self {
         let (username, email) = (username.trim(), email.trim());
         let salt = generate_salt();
         let hashed_password = generate_hash(password, salt.as_str());
@@ -100,7 +110,7 @@ impl User {
         }
     }
 
-    pub async fn from_id(pool: &PgPool, id: i32) -> Option<User> {
+    pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {
         let result = sqlx::query!("SELECT * FROM users WHERE id = $1", id)
             .fetch_one(pool)
             .await
@@ -117,6 +127,36 @@ impl User {
     }
 }
 
+impl Clone for User {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            username: self.username.clone(),
+            email: self.email.clone(),
+            password: self.password.clone(),
+            created_at: self.created_at.clone(),
+            salt: self.salt.clone()
+        }
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for User {
+    type Error = Redirect;
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let db_state = req.rocket().state::<crate::DBState>().unwrap();
+        let cookies = req.cookies();
+
+        if let Some(auth_cookie) = cookies.get_private("current_user") {
+            let user_id = auth_cookie.value().parse::<i32>().unwrap();
+            Self::from_id(&db_state.pool, user_id).await.or_forward(())
+        } else {
+            Outcome::Failure((Status::Forbidden, Redirect::to(uri!(crate::login))))
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct CodeSnippet {
     pub id: i32,
@@ -129,7 +169,7 @@ pub struct CodeSnippet {
 }
 
 impl CodeSnippet {
-    pub async fn query_all(pool: &PgPool) -> Vec<CodeSnippet> {
+    pub async fn query_all(pool: &PgPool) -> Vec<Self> {
         let results = sqlx::query!("SELECT * FROM code_snippets")
             .fetch_all(pool)
             .await
@@ -156,11 +196,4 @@ impl CodeSnippet {
 
         snippets
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AuthToken {
-    pub id: String,
-    pub token: String,
-    pub user: User
 }
