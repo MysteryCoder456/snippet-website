@@ -18,7 +18,7 @@
         </small>
     {% endif %} #}
 
-    <form method="POST">
+    <form action="/register" method="POST">
         <fieldset class="form-group">
             <div class="mb-3">
                 {{ m::input(label="Username", type="text", name="username") }}

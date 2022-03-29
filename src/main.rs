@@ -78,7 +78,26 @@ fn login() -> Template {
 
 #[post("/login", data = "<form>")]
 async fn login_api(mut form: Form<Contextual<'_, forms::LoginForm<'_>>>, db_state: &State<DBState>) -> (Status, Template) {
-    let template: Template = todo!();
+    let template: Template = match form.value {
+        Some(ref login_user) => {
+            let pool = &db_state.pool;
+
+            let username = login_user.username;
+            let password = login_user.password;
+
+            let auth_result = models::User::authenticate(pool, username, password).await;
+
+            if let Err((name, error)) = auth_result {
+                let e = Error::validation(error).with_name(name);
+                form.context.push_error(e);
+                Template::render("login", &form.context)
+            } else {
+                index(db_state).await
+            }
+        }
+        None => Template::render("login", &form.context)
+    };
+
     (form.context.status(), template)
 }
 

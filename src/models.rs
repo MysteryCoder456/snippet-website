@@ -32,6 +32,23 @@ pub struct User {
 }
 
 impl User {
+    pub async fn authenticate(pool: &PgPool, username: &str, password: &str) -> Result<String, (&'static str, &'static str)> {
+        let result = sqlx::query!(r#"SELECT salt, passwd FROM users WHERE username = $1"#, username).fetch_one(pool).await;
+
+        if let Ok(record) = result {
+            let salt = record.salt.as_str();
+            let hashed = generate_hash(password, salt);
+
+            if hashed == record.passwd {
+                Ok("Logged in!".to_owned())
+            } else {
+                Err(("password", "Incorrect password"))
+            }
+        } else {
+            Err(("username", "Invalid username"))
+        }
+    }
+
     pub async fn verify(pool: &PgPool, username: &str, email: &str) -> (bool, bool) {
         let result = sqlx::query!(
             r#"
@@ -139,4 +156,11 @@ impl CodeSnippet {
 
         snippets
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthToken {
+    pub id: String,
+    pub token: String,
+    pub user: User
 }
