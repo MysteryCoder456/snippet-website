@@ -38,7 +38,7 @@ async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
 ) -> (Status, Template) {
-    let template = match form.value {
+    let template: Template = match form.value {
         Some(ref register_user) => {
             let pool = &db_state.pool;
 
@@ -60,7 +60,7 @@ async fn register_api(
 
             if username_valid && email_valid {
                 models::User::create(pool, username, email, password).await;
-                index(db_state).await
+                login()
             } else {
                 Template::render("register", &form.context)
             }
@@ -68,6 +68,17 @@ async fn register_api(
         None => Template::render("register", &form.context),
     };
 
+    (form.context.status(), template)
+}
+
+#[get("/login")]
+fn login() -> Template {
+    Template::render("login", &Context::default())
+}
+
+#[post("/login", data = "<form>")]
+async fn login_api(mut form: Form<Contextual<'_, forms::LoginForm<'_>>>, db_state: &State<DBState>) -> (Status, Template) {
+    let template: Template = todo!();
     (form.context.status(), template)
 }
 
@@ -85,6 +96,6 @@ async fn rocket() -> _ {
     rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
-        .mount("/", routes![index, register, register_api])
+        .mount("/", routes![index, register, register_api, login, login_api])
         .mount("/static", FileServer::from("static"))
 }
