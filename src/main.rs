@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate rocket;
 
-use std::collections::HashMap;
-
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
@@ -10,6 +8,7 @@ use rocket::{
     routes, State, response::Redirect,
 };
 use rocket_dyn_templates::Template;
+use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 mod forms;
@@ -19,12 +18,21 @@ struct DBState {
     pool: PgPool,
 }
 
+#[derive(Serialize)]
+struct IndexContext {
+    user: Option<models::User>,
+    code_snippets: Vec<models::CodeSnippet>
+}
+
 #[get("/")]
-async fn index(db_state: &State<DBState>) -> Template {
+async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
 
-    let ctx: HashMap<_, _> = HashMap::from_iter([("code_snippets", snippets)]);
+    let ctx = IndexContext {
+        user,
+        code_snippets: snippets
+    };
     Template::render("home", ctx)
 }
 

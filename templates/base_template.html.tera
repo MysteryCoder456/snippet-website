@@ -39,13 +39,13 @@
                     </div>
 
                     <div class="navbar-nav ms-auto">
-                        {# {% if user.is_authenticated %}
+                        {% if user %}
                             <a href="/profile" class="nav-link">Logged in as <b>{{ user.username }}</b></a>
-                            <a href="/logout" class="nav-link">Logout</a> #}
-                        {# {% else %} #}
+                            <a href="/logout" class="nav-link">Logout</a>
+                        {% else %}
                             <a href="/login" class="nav-link">Login</a>
                             <a href="/register" class="nav-link">Register</a>
-                        {# {% endif %} #}
+                        {% endif %}
                     </div>
                 </div>
             </div>
