@@ -2,15 +2,16 @@
 extern crate rocket;
 
 use rocket::{
-    form::{Context, Contextual, Error, Form},
+    form::{Context, Contextual, Error, Form, Errors, name::{Name, NameBuf}},
     fs::FileServer,
-    http::{Cookie, CookieJar},
+    http::{Cookie, CookieJar, Status},
     response::Redirect,
     routes, State,
 };
 use rocket_dyn_templates::Template;
 use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use indexmap::{IndexMap, IndexSet};
 
 mod forms;
 mod models;
@@ -25,6 +26,18 @@ struct IndexContext {
     code_snippets: Vec<models::CodeSnippet>,
 }
 
+#[derive(Default, Serialize)]
+struct AddSnippetContext<'v> {
+    user: Option<models::User>,
+    errors: IndexMap<NameBuf<'v>, Errors<'v>>,
+    values: IndexMap<&'v Name, Vec<&'v str>>,
+    data_fields: IndexSet<&'v Name>,
+    form_errors: Errors<'v>,
+    #[serde(skip)]
+    status: Status,
+
+}
+
 #[get("/")]
 async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Template {
     let pool = &db_state.pool;
@@ -35,6 +48,13 @@ async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Templat
         code_snippets: snippets,
     };
     Template::render("home", ctx)
+}
+
+#[get("/new")]
+fn add_snippet(user: models::User) -> Template {
+    let mut ctx = AddSnippetContext::default();
+    ctx.user = Some(user);
+    Template::render("add_snippet", &ctx)
 }
 
 #[get("/register")]
@@ -140,7 +160,7 @@ async fn rocket() -> _ {
         .manage(DBState { pool })
         .mount(
             "/",
-            routes![index, register, register_api, login, login_api, logout],
+            routes![index, add_snippet, register, register_api, login, login_api, logout],
         )
         .mount("/static", FileServer::from("static"))
 }

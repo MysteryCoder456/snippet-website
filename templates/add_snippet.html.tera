@@ -1,0 +1,32 @@
+{% import "macros" as m %}
+{% extends "base_template" %}
+
+{% block title %}
+    Add Snippet
+{% endblock title %}
+
+{% block main %}
+    <h3 class="pb-3 border-bottom">Add a New Snippet</h3>
+
+    <form action="/new" method="POST">
+        <fieldset class="form-group">
+            <div class="mb-3">
+                {{ m::input(label="Title", type="text", name="title") }}
+            </div>
+
+            <div class="mb-3">
+                {{ m::input(label="Language", type="text", name="language", value="plaintext") }}
+            </div>
+
+            <div class="mb-3">
+                {{ m::textarea(label="Code", name="code", value="Hello, World!") }}
+            </div>
+        </fieldset>
+
+        <div class="form-group">
+            <button class="btn btn-outline-primary" type="submit">
+                Add
+            </button>
+        </div>
+    </form>
+{% endblock main %}

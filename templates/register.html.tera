@@ -24,7 +24,7 @@
                 {{ m::input(label="Username", type="text", name="username") }}
             </div>
             <div class="mb-3">
-                {{ m::input(label="Email Address", type="text", name="email") }}
+                {{ m::input(label="Email Address", type="email", name="email") }}
             </div>
 
             <div class="mb-3">

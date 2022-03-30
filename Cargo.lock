@@ -2086,6 +2086,7 @@ name = "snippet-website"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "indexmap",
  "rand",
  "rocket",
  "rocket_dyn_templates",
