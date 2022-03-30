@@ -2,40 +2,21 @@
 extern crate rocket;
 
 use rocket::{
-    form::{Context, Contextual, Error, Form, Errors, name::{Name, NameBuf}},
+    form::{Context, Contextual, Error, Form},
     fs::FileServer,
-    http::{Cookie, CookieJar, Status},
+    http::{Cookie, CookieJar},
     response::Redirect,
     routes, State,
 };
 use rocket_dyn_templates::Template;
-use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use indexmap::{IndexMap, IndexSet};
 
 mod forms;
 mod models;
+mod contexts;
 
 struct DBState {
     pool: PgPool,
-}
-
-#[derive(Serialize)]
-struct IndexContext {
-    user: Option<models::User>,
-    code_snippets: Vec<models::CodeSnippet>,
-}
-
-#[derive(Default, Serialize)]
-struct AddSnippetContext<'v> {
-    user: Option<models::User>,
-    errors: IndexMap<NameBuf<'v>, Errors<'v>>,
-    values: IndexMap<&'v Name, Vec<&'v str>>,
-    data_fields: IndexSet<&'v Name>,
-    form_errors: Errors<'v>,
-    #[serde(skip)]
-    status: Status,
-
 }
 
 #[get("/")]
@@ -43,7 +24,7 @@ async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Templat
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
 
-    let ctx = IndexContext {
+    let ctx = contexts::IndexContext {
         user,
         code_snippets: snippets,
     };
@@ -52,7 +33,7 @@ async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Templat
 
 #[get("/new")]
 fn add_snippet(user: models::User) -> Template {
-    let mut ctx = AddSnippetContext::default();
+    let mut ctx = contexts::AddSnippetContext::default();
     ctx.user = Some(user);
     Template::render("add_snippet", &ctx)
 }
