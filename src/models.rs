@@ -79,16 +79,16 @@ impl User {
         }
     }
 
-    pub async fn create(pool: &PgPool, username: &str, email: &str, password: &str) -> Self {
+    pub async fn create(pool: &PgPool, username: &str, email: &str, password: &str) -> i32 {
         let (username, email) = (username.trim(), email.trim());
         let salt = generate_salt();
         let hashed_password = generate_hash(password, salt.as_str());
 
-        let result = sqlx::query!(
+        let record = sqlx::query!(
             r#"
             INSERT INTO users (username, email, passwd, salt)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, created_at
+            RETURNING id
             "#,
             username,
             email,
@@ -99,15 +99,7 @@ impl User {
         .await
         .unwrap();
 
-        // TODO: Make a function to get user from row
-        User {
-            id: result.id,
-            username: username.to_owned(),
-            email: email.to_owned(),
-            password: password.to_owned(),
-            created_at: result.created_at.timestamp(),
-            salt,
-        }
+        record.id
     }
 
     pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
-    http::{Status, CookieJar, Cookie},
+    http::{CookieJar, Cookie},
     routes, State, response::Redirect,
 };
 use rocket_dyn_templates::Template;
@@ -37,6 +37,7 @@ fn register() -> Template {
 async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
+    cookie_jar: &CookieJar<'_>
 ) -> Result<Redirect, Template> {
     match form.value {
         Some(ref register_user) => {
@@ -59,8 +60,10 @@ async fn register_api(
             }
 
             if username_valid && email_valid {
-                models::User::create(pool, username, email, password).await;
-                Ok(Redirect::to(uri!(login)))
+                let user_id = models::User::create(pool, username, email, password).await;
+                let auth_cookie = Cookie::new("current_user", user_id.to_string());
+                cookie_jar.add_private(auth_cookie);
+                Ok(Redirect::to(uri!(index)))
             } else {
                 Err(Template::render("register", &form.context))
             }
