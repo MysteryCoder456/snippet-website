@@ -4,8 +4,9 @@ extern crate rocket;
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
-    http::{CookieJar, Cookie},
-    routes, State, response::Redirect,
+    http::{Cookie, CookieJar},
+    response::Redirect,
+    routes, State,
 };
 use rocket_dyn_templates::Template;
 use serde::Serialize;
@@ -21,7 +22,7 @@ struct DBState {
 #[derive(Serialize)]
 struct IndexContext {
     user: Option<models::User>,
-    code_snippets: Vec<models::CodeSnippet>
+    code_snippets: Vec<models::CodeSnippet>,
 }
 
 #[get("/")]
@@ -31,7 +32,7 @@ async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Templat
 
     let ctx = IndexContext {
         user,
-        code_snippets: snippets
+        code_snippets: snippets,
     };
     Template::render("home", ctx)
 }
@@ -45,7 +46,7 @@ fn register() -> Template {
 async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
-    cookie_jar: &CookieJar<'_>
+    cookie_jar: &CookieJar<'_>,
 ) -> Result<Redirect, Template> {
     match form.value {
         Some(ref register_user) => {
@@ -89,7 +90,7 @@ fn login() -> Template {
 async fn login_api(
     mut form: Form<Contextual<'_, forms::LoginForm<'_>>>,
     db_state: &State<DBState>,
-    cookie_jar: &CookieJar<'_>
+    cookie_jar: &CookieJar<'_>,
 ) -> Result<Redirect, Template> {
     match form.value {
         Some(ref login_user) => {
@@ -117,6 +118,12 @@ async fn login_api(
     }
 }
 
+#[get("/logout")]
+fn logout(cookie_jar: &CookieJar<'_>) -> Redirect {
+    cookie_jar.remove_private(Cookie::named("current_user"));
+    Redirect::to(uri!(index))
+}
+
 #[launch]
 async fn rocket() -> _ {
     dotenv::dotenv().ok();
@@ -133,7 +140,7 @@ async fn rocket() -> _ {
         .manage(DBState { pool })
         .mount(
             "/",
-            routes![index, register, register_api, login, login_api],
+            routes![index, register, register_api, login, login_api, logout],
         )
         .mount("/static", FileServer::from("static"))
 }

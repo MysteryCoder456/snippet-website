@@ -1,5 +1,10 @@
 use rand::{distributions::Alphanumeric, Rng};
-use rocket::{request::{FromRequest, Outcome, Request}, response::Redirect, outcome::IntoOutcome, http::Status};
+use rocket::{
+    http::Status,
+    outcome::IntoOutcome,
+    request::{FromRequest, Outcome, Request},
+    response::Redirect,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
@@ -127,7 +132,7 @@ impl Clone for User {
             email: self.email.clone(),
             password: self.password.clone(),
             created_at: self.created_at.clone(),
-            salt: self.salt.clone()
+            salt: self.salt.clone(),
         }
     }
 }
