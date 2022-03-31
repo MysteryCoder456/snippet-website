@@ -139,7 +139,7 @@ impl Clone for User {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
-    type Error = Redirect;
+    type Error = &'r str;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db_state = req.rocket().state::<crate::DBState>().unwrap();
@@ -149,7 +149,10 @@ impl<'r> FromRequest<'r> for User {
             let user_id = auth_cookie.value().parse::<i32>().unwrap();
             Self::from_id(&db_state.pool, user_id).await.or_forward(())
         } else {
-            Outcome::Failure((Status::Forbidden, Redirect::to(uri!(crate::login))))
+            Outcome::Failure((
+                Status::Forbidden,
+                "You must login before accessing this page!",
+            ))
         }
     }
 }

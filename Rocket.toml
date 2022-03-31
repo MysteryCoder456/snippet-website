@@ -1,9 +1,9 @@
 [debug]
 address = "127.0.0.1"
 port = 8000
-secret_key = "575de8b71d4dd0ee4d36fa4251dbde0383486105ba76fc4bc398b278da29beb9"
+secret_key = "fM8kK7dSFPAuwvEEIo53pt1tAHR5+HOk0+OdVBlQ0k0="
 
 [release]
 address = "0.0.0.0"
 port = 8050
-secret_key = "7060c624f331c2cbf0488798cbf3e77cc37f6e241342f60f3ed58b3dc8991358"
+secret_key = "bZ1ZA3Fxv8yfQZDpNbDZjYqPBkLYbxK4C7sDinkEZWc="
