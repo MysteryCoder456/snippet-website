@@ -18,3 +18,14 @@ pub struct LoginForm<'a> {
     pub username: &'a str,
     pub password: &'a str,
 }
+
+#[derive(FromForm)]
+pub struct AddSnippetForm<'a> {
+    #[field(validate = len(2..=100).or_else(msg!("Title must be between 2 and 100 characters long")))]
+    pub title: &'a str,
+
+    #[field(validate = len(..=20).or_else(msg!("Language cannot be more than 20 characters long")))]
+    pub language: &'a str,
+
+    pub code: &'a str,
+}

@@ -167,7 +167,7 @@ pub struct CodeSnippet {
 
 impl CodeSnippet {
     pub async fn query_all(pool: &PgPool) -> Vec<Self> {
-        let results = sqlx::query!("SELECT * FROM code_snippets")
+        let results = sqlx::query!("SELECT * FROM code_snippets ORDER BY created_at DESC")
             .fetch_all(pool)
             .await
             .unwrap();
@@ -192,5 +192,29 @@ impl CodeSnippet {
         }
 
         snippets
+    }
+
+    pub async fn create(
+        pool: &PgPool,
+        author: &User,
+        title: &str,
+        language: &str,
+        code: &str,
+    ) -> i32 {
+        let record = sqlx::query!(
+            r#"
+            INSERT INTO code_snippets (author_id, title, lang, code)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+            "#,
+            author.id,
+            title,
+            language,
+            code
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        record.id
     }
 }

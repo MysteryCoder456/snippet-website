@@ -1,5 +1,4 @@
-use indexmap::{IndexMap, IndexSet};
-use rocket::form::{name::{NameBuf, Name}, Errors};
+use rocket::form::Context;
 use serde::Serialize;
 
 use crate::models;
@@ -10,11 +9,18 @@ pub struct IndexContext {
     pub code_snippets: Vec<models::CodeSnippet>,
 }
 
-#[derive(Default, Serialize)]
-pub struct AddSnippetContext<'v> {
-    pub user: Option<models::User>,
-    errors: IndexMap<NameBuf<'v>, Errors<'v>>,
-    values: IndexMap<&'v Name, Vec<&'v str>>,
-    data_fields: IndexSet<&'v Name>,
-    form_errors: Errors<'v>,
+#[derive(Serialize)]
+pub struct RegisterContext<'a, 'b> {
+    pub form: &'a Context<'b>,
+}
+
+#[derive(Serialize)]
+pub struct LoginContext<'a, 'b> {
+    pub form: &'a Context<'b>,
+}
+
+#[derive(Serialize)]
+pub struct AddSnippetContext<'a, 'b> {
+    pub user: models::User,
+    pub form: &'a Context<'b>,
 }

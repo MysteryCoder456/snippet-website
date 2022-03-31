@@ -11,9 +11,9 @@ use rocket::{
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
+mod contexts;
 mod forms;
 mod models;
-mod contexts;
 
 struct DBState {
     pool: PgPool,
@@ -33,14 +33,47 @@ async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Templat
 
 #[get("/new")]
 fn add_snippet(user: models::User) -> Template {
-    let mut ctx = contexts::AddSnippetContext::default();
-    ctx.user = Some(user);
+    let ctx = contexts::AddSnippetContext {
+        user,
+        form: &Context::default(),
+    };
     Template::render("add_snippet", &ctx)
+}
+
+#[post("/new", data = "<form>")]
+async fn add_snippet_api(
+    form: Form<Contextual<'_, forms::AddSnippetForm<'_>>>,
+    db_state: &State<DBState>,
+    user: models::User,
+) -> Result<Redirect, Template> {
+    match form.value {
+        Some(ref new_snippet) => {
+            let pool = &db_state.pool;
+
+            let title = new_snippet.title;
+            let language = new_snippet.language;
+            let code = new_snippet.code;
+
+            // TODO: Redirect to detailed snippet route
+            let _snippet_id = models::CodeSnippet::create(pool, &user, title, language, code).await;
+            Ok(Redirect::to(uri!(index)))
+        }
+        None => {
+            let ctx = contexts::AddSnippetContext {
+                user,
+                form: &form.context,
+            };
+            Err(Template::render("add_snippet", &ctx))
+        }
+    }
 }
 
 #[get("/register")]
 fn register() -> Template {
-    Template::render("register", &Context::default())
+    let ctx = contexts::RegisterContext {
+        form: &Context::default(),
+    };
+    Template::render("register", &ctx)
 }
 
 #[post("/register", data = "<form>")]
@@ -75,16 +108,27 @@ async fn register_api(
                 cookie_jar.add_private(auth_cookie);
                 Ok(Redirect::to(uri!(index)))
             } else {
-                Err(Template::render("register", &form.context))
+                let ctx = contexts::RegisterContext {
+                    form: &form.context,
+                };
+                Err(Template::render("register", &ctx))
             }
         }
-        None => Err(Template::render("register", &form.context)),
+        None => {
+            let ctx = contexts::RegisterContext {
+                form: &form.context,
+            };
+            Err(Template::render("register", &ctx))
+        }
     }
 }
 
 #[get("/login")]
 fn login() -> Template {
-    Template::render("login", &Context::default())
+    let ctx = contexts::LoginContext {
+        form: &Context::default(),
+    };
+    Template::render("login", &ctx)
 }
 
 #[post("/login", data = "<form>")]
@@ -111,11 +155,20 @@ async fn login_api(
                 Err((name, error)) => {
                     let e = Error::validation(error).with_name(name);
                     form.context.push_error(e);
-                    Err(Template::render("login", &form.context))
+
+                    let ctx = contexts::LoginContext {
+                        form: &form.context,
+                    };
+                    Err(Template::render("login", &ctx))
                 }
             }
         }
-        None => Err(Template::render("login", &form.context)),
+        None => {
+            let ctx = contexts::LoginContext {
+                form: &form.context,
+            };
+            Err(Template::render("login", &ctx))
+        }
     }
 }
 
@@ -141,7 +194,16 @@ async fn rocket() -> _ {
         .manage(DBState { pool })
         .mount(
             "/",
-            routes![index, add_snippet, register, register_api, login, login_api, logout],
+            routes![
+                index,
+                add_snippet,
+                add_snippet_api,
+                register,
+                register_api,
+                login,
+                login_api,
+                logout
+            ],
         )
         .mount("/static", FileServer::from("static"))
 }
