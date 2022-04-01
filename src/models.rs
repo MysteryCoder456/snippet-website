@@ -1,9 +1,8 @@
 use rand::{distributions::Alphanumeric, Rng};
 use rocket::{
-    http::Status,
+    http::Cookie,
     outcome::IntoOutcome,
     request::{FromRequest, Outcome, Request},
-    response::Redirect,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -143,16 +142,15 @@ impl<'r> FromRequest<'r> for User {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db_state = req.rocket().state::<crate::DBState>().unwrap();
-        let cookies = req.cookies();
+        let cookie_jar = req.cookies();
 
-        if let Some(auth_cookie) = cookies.get_private("current_user") {
+        if let Some(auth_cookie) = cookie_jar.get_private("current_user") {
             let user_id = auth_cookie.value().parse::<i32>().unwrap();
             Self::from_id(&db_state.pool, user_id).await.or_forward(())
         } else {
-            Outcome::Failure((
-                Status::Forbidden,
-                "You must login before accessing this page!",
-            ))
+            let post_login_cookie = Cookie::new("post_login_uri", req.uri().path().to_string());
+            cookie_jar.add(post_login_cookie);
+            Outcome::Forward(())
         }
     }
 }

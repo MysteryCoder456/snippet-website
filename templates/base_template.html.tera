@@ -33,9 +33,7 @@
                 <div class="collapse navbar-collapse">
                     <div class="navbar-nav">
                         <a href="/" class="nav-link">Home</a>
-                        <a href="/new" class="nav-link"
-                            >Add Snippet</a
-                        >
+                        <a href="/new" class="nav-link">Add Snippet</a>
                     </div>
 
                     <div class="navbar-nav ms-auto">
@@ -52,12 +50,10 @@
         </nav>
 
         <main role="main" class="container col-md-9 pb-2">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+            {% if flash %}
+                <div class="alert alert-{{ flash.0 }}">
+                    {{ flash.1 }}
+                </div>
             {% endif %}
 
             {% block main %}{% endblock main %}

@@ -7,6 +7,7 @@ use crate::models;
 pub struct IndexContext {
     pub user: Option<models::User>,
     pub code_snippets: Vec<models::CodeSnippet>,
+    pub flash: Option<(String, String)>,
 }
 
 #[derive(Serialize)]
@@ -17,6 +18,7 @@ pub struct RegisterContext<'a, 'b> {
 #[derive(Serialize)]
 pub struct LoginContext<'a, 'b> {
     pub form: &'a Context<'b>,
+    pub flash: Option<(String, String)>,
 }
 
 #[derive(Serialize)]

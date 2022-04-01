@@ -5,8 +5,8 @@ use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
     http::{Cookie, CookieJar},
-    response::Redirect,
-    routes, State,
+    response::{Redirect, Flash},
+    routes, State, request::FlashMessage,
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -20,13 +20,20 @@ struct DBState {
 }
 
 #[get("/")]
-async fn index(db_state: &State<DBState>, user: Option<models::User>) -> Template {
+async fn index(db_state: &State<DBState>, user: Option<models::User>, flash: Option<FlashMessage<'_>>) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
+    let flash_msg =
+        if let Some(f) = flash {
+            Some(f.into_inner())
+        } else {
+            None
+        };
 
     let ctx = contexts::IndexContext {
         user,
         code_snippets: snippets,
+        flash: flash_msg,
     };
     Template::render("home", ctx)
 }
@@ -40,12 +47,17 @@ fn add_snippet(user: models::User) -> Template {
     Template::render("add_snippet", &ctx)
 }
 
+#[get("/new", rank = 2)]
+fn add_snippet_no_auth() -> Flash<Redirect> {
+    Flash::warning(Redirect::to(uri!(login)), "You must login to make a new snippet")
+}
+
 #[post("/new", data = "<form>")]
 async fn add_snippet_api(
     form: Form<Contextual<'_, forms::AddSnippetForm<'_>>>,
     db_state: &State<DBState>,
     user: models::User,
-) -> Result<Redirect, Template> {
+) -> Result<Flash<Redirect>, Template> {
     match form.value {
         Some(ref new_snippet) => {
             let pool = &db_state.pool;
@@ -56,7 +68,7 @@ async fn add_snippet_api(
 
             // TODO: Redirect to detailed snippet route
             let _snippet_id = models::CodeSnippet::create(pool, &user, title, language, code).await;
-            Ok(Redirect::to(uri!(index)))
+            Ok(Flash::success(Redirect::to(uri!(index)), "Created new snippet!"))
         }
         None => {
             let ctx = contexts::AddSnippetContext {
@@ -81,7 +93,7 @@ async fn register_api(
     mut form: Form<Contextual<'_, forms::RegisterForm<'_>>>,
     db_state: &State<DBState>,
     cookie_jar: &CookieJar<'_>,
-) -> Result<Redirect, Template> {
+) -> Result<Flash<Redirect>, Template> {
     match form.value {
         Some(ref register_user) => {
             let pool = &db_state.pool;
@@ -106,7 +118,14 @@ async fn register_api(
                 let user_id = models::User::create(pool, username, email, password).await;
                 let auth_cookie = Cookie::new("current_user", user_id.to_string());
                 cookie_jar.add_private(auth_cookie);
-                Ok(Redirect::to(uri!(index)))
+
+                if let Some(post_login_cookie) = cookie_jar.get("post_login_uri") {
+                    let uri = post_login_cookie.value().to_owned();
+                    cookie_jar.remove(Cookie::named("post_login_uri"));
+                    Ok(Flash::success(Redirect::to(uri), "New account created. Welcome to Snippet!"))
+                } else {
+                    Ok(Flash::success(Redirect::to(uri!(index)), "New account created. Welcome to Snippet!"))
+                }
             } else {
                 let ctx = contexts::RegisterContext {
                     form: &form.context,
@@ -124,9 +143,17 @@ async fn register_api(
 }
 
 #[get("/login")]
-fn login() -> Template {
+fn login(flash: Option<FlashMessage<'_>>) -> Template {
+    let flash_msg =
+        if let Some(f) = flash {
+            Some(f.into_inner())
+        } else {
+            None
+        };
+
     let ctx = contexts::LoginContext {
         form: &Context::default(),
+        flash: flash_msg,
     };
     Template::render("login", &ctx)
 }
@@ -136,7 +163,7 @@ async fn login_api(
     mut form: Form<Contextual<'_, forms::LoginForm<'_>>>,
     db_state: &State<DBState>,
     cookie_jar: &CookieJar<'_>,
-) -> Result<Redirect, Template> {
+) -> Result<Flash<Redirect>, Template> {
     match form.value {
         Some(ref login_user) => {
             let pool = &db_state.pool;
@@ -150,7 +177,14 @@ async fn login_api(
                 Ok(user_id) => {
                     let auth_cookie = Cookie::new("current_user", user_id.to_string());
                     cookie_jar.add_private(auth_cookie);
-                    Ok(Redirect::to(uri!(index)))
+
+                    if let Some(post_login_cookie) = cookie_jar.get("post_login_uri") {
+                        let uri = post_login_cookie.value().to_owned();
+                        cookie_jar.remove(Cookie::named("post_login_uri"));
+                        Ok(Flash::success(Redirect::to(uri), "Logged in successfully!"))
+                    } else {
+                        Ok(Flash::success(Redirect::to(uri!(index)), "Logged in successfully!"))
+                    }
                 }
                 Err((name, error)) => {
                     let e = Error::validation(error).with_name(name);
@@ -158,6 +192,7 @@ async fn login_api(
 
                     let ctx = contexts::LoginContext {
                         form: &form.context,
+                        flash: None,
                     };
                     Err(Template::render("login", &ctx))
                 }
@@ -166,6 +201,7 @@ async fn login_api(
         None => {
             let ctx = contexts::LoginContext {
                 form: &form.context,
+                flash: None,
             };
             Err(Template::render("login", &ctx))
         }
@@ -173,9 +209,9 @@ async fn login_api(
 }
 
 #[get("/logout")]
-fn logout(cookie_jar: &CookieJar<'_>) -> Redirect {
+fn logout(cookie_jar: &CookieJar<'_>) -> Flash<Redirect> {
     cookie_jar.remove_private(Cookie::named("current_user"));
-    Redirect::to(uri!(index))
+    Flash::warning(Redirect::to(uri!(index)), "You have been logged out! Log back in to enjoy all the features of Snippet.")
 }
 
 #[launch]
@@ -197,6 +233,7 @@ async fn rocket() -> _ {
             routes![
                 index,
                 add_snippet,
+                add_snippet_no_auth,
                 add_snippet_api,
                 register,
                 register_api,
