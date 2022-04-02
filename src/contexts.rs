@@ -31,4 +31,5 @@ pub struct AddSnippetContext<'a, 'b> {
 pub struct SnippetDetailContext {
     pub user: Option<models::User>,
     pub snippet: models::CodeSnippet,
+    pub flash: Option<(String, String)>,
 }

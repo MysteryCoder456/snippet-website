@@ -5,8 +5,9 @@ use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
     http::{Cookie, CookieJar},
-    response::{Redirect, Flash},
-    routes, State, request::FlashMessage,
+    request::FlashMessage,
+    response::{Flash, Redirect},
+    routes, State,
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -20,15 +21,18 @@ struct DBState {
 }
 
 #[get("/")]
-async fn index(db_state: &State<DBState>, user: Option<models::User>, flash: Option<FlashMessage<'_>>) -> Template {
+async fn index(
+    db_state: &State<DBState>,
+    user: Option<models::User>,
+    flash: Option<FlashMessage<'_>>,
+) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
-    let flash_msg =
-        if let Some(f) = flash {
-            Some(f.into_inner())
-        } else {
-            None
-        };
+    let flash_msg = if let Some(f) = flash {
+        Some(f.into_inner())
+    } else {
+        None
+    };
 
     let ctx = contexts::IndexContext {
         user,
@@ -49,7 +53,10 @@ fn add_snippet(user: models::User) -> Template {
 
 #[get("/new", rank = 2)]
 fn add_snippet_no_auth() -> Flash<Redirect> {
-    Flash::warning(Redirect::to(uri!(login)), "You must login to make a new snippet")
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to make a new snippet",
+    )
 }
 
 #[post("/new", data = "<form>")]
@@ -66,9 +73,11 @@ async fn add_snippet_api(
             let language = new_snippet.language;
             let code = new_snippet.code;
 
-            // TODO: Redirect to detailed snippet route
-            let _snippet_id = models::CodeSnippet::create(pool, &user, title, language, code).await;
-            Ok(Flash::success(Redirect::to(uri!(index)), "Created new snippet!"))
+            let snippet_id = models::CodeSnippet::create(pool, &user, title, language, code).await;
+            Ok(Flash::success(
+                Redirect::to(uri!(snippet_detail(id = snippet_id))),
+                "Created new snippet!",
+            ))
         }
         None => {
             let ctx = contexts::AddSnippetContext {
@@ -81,11 +90,25 @@ async fn add_snippet_api(
 }
 
 #[get("/snippet/<id>")]
-async fn snippet_detail(id: i32, db_state: &State<DBState>, user: Option<models::User>) -> Option<Template> {
+async fn snippet_detail(
+    id: i32,
+    db_state: &State<DBState>,
+    user: Option<models::User>,
+    flash: Option<FlashMessage<'_>>,
+) -> Option<Template> {
     let pool = &db_state.pool;
     let snippet = models::CodeSnippet::from_id(pool, id).await?;
+    let flash_msg = if let Some(f) = flash {
+        Some(f.into_inner())
+    } else {
+        None
+    };
 
-    let ctx = contexts::SnippetDetailContext { user, snippet };
+    let ctx = contexts::SnippetDetailContext {
+        user,
+        snippet,
+        flash: flash_msg,
+    };
     Some(Template::render("snippet_detail", &ctx))
 }
 
@@ -131,9 +154,15 @@ async fn register_api(
                 if let Some(post_login_cookie) = cookie_jar.get("post_login_uri") {
                     let uri = post_login_cookie.value().to_owned();
                     cookie_jar.remove(Cookie::named("post_login_uri"));
-                    Ok(Flash::success(Redirect::to(uri), "New account created. Welcome to Snippet!"))
+                    Ok(Flash::success(
+                        Redirect::to(uri),
+                        "New account created. Welcome to Snippet!",
+                    ))
                 } else {
-                    Ok(Flash::success(Redirect::to(uri!(index)), "New account created. Welcome to Snippet!"))
+                    Ok(Flash::success(
+                        Redirect::to(uri!(index)),
+                        "New account created. Welcome to Snippet!",
+                    ))
                 }
             } else {
                 let ctx = contexts::RegisterContext {
@@ -153,12 +182,11 @@ async fn register_api(
 
 #[get("/login")]
 fn login(flash: Option<FlashMessage<'_>>) -> Template {
-    let flash_msg =
-        if let Some(f) = flash {
-            Some(f.into_inner())
-        } else {
-            None
-        };
+    let flash_msg = if let Some(f) = flash {
+        Some(f.into_inner())
+    } else {
+        None
+    };
 
     let ctx = contexts::LoginContext {
         form: &Context::default(),
@@ -192,7 +220,10 @@ async fn login_api(
                         cookie_jar.remove(Cookie::named("post_login_uri"));
                         Ok(Flash::success(Redirect::to(uri), "Logged in successfully!"))
                     } else {
-                        Ok(Flash::success(Redirect::to(uri!(index)), "Logged in successfully!"))
+                        Ok(Flash::success(
+                            Redirect::to(uri!(index)),
+                            "Logged in successfully!",
+                        ))
                     }
                 }
                 Err((name, error)) => {
@@ -220,7 +251,10 @@ async fn login_api(
 #[get("/logout")]
 fn logout(cookie_jar: &CookieJar<'_>) -> Flash<Redirect> {
     cookie_jar.remove_private(Cookie::named("current_user"));
-    Flash::warning(Redirect::to(uri!(index)), "You have been logged out! Log back in to enjoy all the features of Snippet.")
+    Flash::warning(
+        Redirect::to(uri!(index)),
+        "You have been logged out! Log back in to enjoy all the features of Snippet.",
+    )
 }
 
 #[launch]

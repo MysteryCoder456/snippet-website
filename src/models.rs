@@ -182,12 +182,11 @@ impl CodeSnippet {
                 continue;
             }
 
-            let updated_at =
-                if let Some(updated) = record.updated_at {
-                    Some(updated.timestamp())
-                } else {
-                    None
-                };
+            let updated_at = if let Some(updated) = record.updated_at {
+                Some(updated.timestamp())
+            } else {
+                None
+            };
 
             snippets.push(CodeSnippet {
                 id: record.id,
@@ -204,14 +203,16 @@ impl CodeSnippet {
     }
 
     pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {
-        let record = sqlx::query!("SELECT * FROM code_snippets WHERE id = $1", id).fetch_one(pool).await.ok()?;
+        let record = sqlx::query!("SELECT * FROM code_snippets WHERE id = $1", id)
+            .fetch_one(pool)
+            .await
+            .ok()?;
 
-        let updated_at =
-            if let Some(updated) = record.updated_at {
-                Some(updated.timestamp())
-            } else {
-                None
-            };
+        let updated_at = if let Some(updated) = record.updated_at {
+            Some(updated.timestamp())
+        } else {
+            None
+        };
 
         Some(CodeSnippet {
             id: record.id,
