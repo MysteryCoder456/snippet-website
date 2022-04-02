@@ -18,6 +18,26 @@
     {% endfor %}
 {% endmacro errors_for %}
 
+{% macro snippet(s, link=true) %}
+    <div class="code-snippet {% if link %} pt-3 border-top {% endif %}">
+        {% if link %}
+            <a href="/snippet/{{ s.id }}" class="display-5 hover-underline">{{ s.title }}</a>
+        {% else %}
+            <span class="display-5">{{ s.title }}</span>
+        {% endif %}
+        <small class="text-muted ms-1">
+            By <a href="/profile/{{ s.author.id }}">{{ s.author.username }}</a>
+            on {{ s.created_at | date(format="%d %b %Y %I:%M %P") }}
+        </small>
+
+        <br>
+        <span class="text-muted">
+            Language: {{ s.language | title }}
+        </span>
+        <pre><code class="text-white language-{{ s.language | lower }} mt-2">{{ s.code }}</code></pre>
+    </div>
+{% endmacro snippet %}
+
 {% macro input(type, label, name, value="", required=true) %}
 
     <label for="id_{{ name | lower }}" class="form-label {% if required %} requiredField {% endif %}">

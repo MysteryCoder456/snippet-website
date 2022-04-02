@@ -1,0 +1,10 @@
+{% import "macros" as m %}
+{% extends "base_template" %}
+
+{% block title %}
+    {{ snippet.title }}
+{% endblock title %}
+
+{% block main %}
+    {{ m::snippet(s=snippet, link=false) }}
+{% endblock main %}

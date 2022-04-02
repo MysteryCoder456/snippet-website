@@ -35,6 +35,18 @@ code {
     color: darkgrey;
 }
 
+.code-snippet .display-5 {
+    color: #21252A;
+}
+
+.hover-underline {
+    text-decoration: none;
+}
+
+.hover-underline:hover {
+    text-decoration-line: underline;
+}
+
 .profile-pic {
     width: 20%;
     aspect-ratio: 1;
