@@ -163,7 +163,7 @@ pub struct CodeSnippet {
     pub code: String,
     pub language: String,
     pub created_at: i64,
-    pub updated_at: i64,
+    pub updated_at: Option<i64>,
 }
 
 impl CodeSnippet {
@@ -175,15 +175,23 @@ impl CodeSnippet {
         let mut snippets = Vec::<CodeSnippet>::new();
 
         for record in results {
-            let updated_at = if record.updated_at.is_some() {
-                record.updated_at.unwrap().timestamp()
+            let author: User;
+            if let Some(user) = User::from_id(pool, record.author_id).await {
+                author = user;
             } else {
-                0
-            };
+                continue;
+            }
+
+            let updated_at =
+                if let Some(updated) = record.updated_at {
+                    Some(updated.timestamp())
+                } else {
+                    None
+                };
 
             snippets.push(CodeSnippet {
                 id: record.id,
-                author: User::from_id(pool, record.author_id).await.unwrap(),
+                author,
                 title: record.title,
                 code: record.code,
                 language: record.lang.unwrap(),
@@ -193,6 +201,27 @@ impl CodeSnippet {
         }
 
         snippets
+    }
+
+    pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {
+        let record = sqlx::query!("SELECT * FROM code_snippets WHERE id = $1", id).fetch_one(pool).await.ok()?;
+
+        let updated_at =
+            if let Some(updated) = record.updated_at {
+                Some(updated.timestamp())
+            } else {
+                None
+            };
+
+        Some(CodeSnippet {
+            id: record.id,
+            author: User::from_id(pool, record.author_id).await?,
+            title: record.title,
+            code: record.code,
+            language: record.lang.unwrap(),
+            created_at: record.created_at.timestamp(),
+            updated_at,
+        })
     }
 
     pub async fn create(

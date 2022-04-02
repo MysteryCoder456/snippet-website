@@ -80,6 +80,15 @@ async fn add_snippet_api(
     }
 }
 
+#[get("/snippet/<id>")]
+async fn snippet_detail(id: i32, db_state: &State<DBState>, user: Option<models::User>) -> Option<Template> {
+    let pool = &db_state.pool;
+    let snippet = models::CodeSnippet::from_id(pool, id).await?;
+
+    let ctx = contexts::SnippetDetailContext { user, snippet };
+    Some(Template::render("snippet_detail", &ctx))
+}
+
 #[get("/register")]
 fn register() -> Template {
     let ctx = contexts::RegisterContext {
@@ -235,6 +244,7 @@ async fn rocket() -> _ {
                 add_snippet,
                 add_snippet_no_auth,
                 add_snippet_api,
+                snippet_detail,
                 register,
                 register_api,
                 login,
