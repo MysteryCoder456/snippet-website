@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+use piston_rs::{Client, Executor, File};
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
@@ -110,6 +111,24 @@ async fn snippet_detail(
         flash: flash_msg,
     };
     Some(Template::render("snippet_detail", &ctx))
+}
+
+#[get("/snippet/<id>/run")]
+async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
+    let pool = &db_state.pool;
+    let snippet = models::CodeSnippet::from_id(pool, id).await?;
+
+    let piston_client = Client::new();
+    let executor = Executor::new()
+        .set_language(&snippet.language.to_lowercase())
+        .set_version("*")
+        .add_file(
+            File::default()
+                .set_content(&snippet.code)
+        );
+
+    let response = piston_client.execute(&executor).await.ok()?;
+    Some(response.run.output)
 }
 
 #[get("/register")]
@@ -279,6 +298,7 @@ async fn rocket() -> _ {
                 add_snippet_no_auth,
                 add_snippet_api,
                 snippet_detail,
+                snippet_run,
                 register,
                 register_api,
                 login,
