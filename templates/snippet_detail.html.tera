@@ -7,4 +7,29 @@
 
 {% block main %}
     {{ m::snippet(s=snippet, link=false) }}
+
+    <button class="btn btn-outline-primary mb-2" id="run-btn" onclick="runCode()">Run Code</button>
+    <pre style="display: none;" id="run-output"><code class="text-white language-plaintext mt-2"></code></pre>
+
+    <script>
+        let btn = document.querySelector("#run-btn");
+        let output = document.querySelector("#run-output");
+        let output_inner = document.querySelector("#run-output code");
+
+        function runCode() {
+            output.style.display = "block";
+            output_inner.innerHTML = "Loading...";
+            
+            let xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() { 
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    output_inner.innerHTML = xmlHttp.responseText;
+                }
+            }
+
+            let url = "/snippet/{{ snippet.id }}/run";
+            xmlHttp.open("GET", url, true);
+            xmlHttp.send(null);
+        }
+    </script>
 {% endblock main %}
