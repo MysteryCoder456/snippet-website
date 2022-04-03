@@ -126,11 +126,11 @@ impl User {
 impl Clone for User {
     fn clone(&self) -> Self {
         Self {
-            id: self.id.clone(),
+            id: self.id,
             username: self.username.clone(),
             email: self.email.clone(),
             password: self.password.clone(),
-            created_at: self.created_at.clone(),
+            created_at: self.created_at,
             salt: self.salt.clone(),
         }
     }
@@ -175,17 +175,10 @@ impl CodeSnippet {
         let mut snippets = Vec::<CodeSnippet>::new();
 
         for record in results {
-            let author: User;
-            if let Some(user) = User::from_id(pool, record.author_id).await {
-                author = user;
+            let author: User = if let Some(user) = User::from_id(pool, record.author_id).await {
+                user
             } else {
                 continue;
-            }
-
-            let updated_at = if let Some(updated) = record.updated_at {
-                Some(updated.timestamp())
-            } else {
-                None
             };
 
             snippets.push(CodeSnippet {
@@ -195,7 +188,7 @@ impl CodeSnippet {
                 code: record.code,
                 language: record.lang.unwrap(),
                 created_at: record.created_at.timestamp(),
-                updated_at,
+                updated_at: record.updated_at.map(|updated| updated.timestamp()),
             });
         }
 
@@ -208,12 +201,6 @@ impl CodeSnippet {
             .await
             .ok()?;
 
-        let updated_at = if let Some(updated) = record.updated_at {
-            Some(updated.timestamp())
-        } else {
-            None
-        };
-
         Some(CodeSnippet {
             id: record.id,
             author: User::from_id(pool, record.author_id).await?,
@@ -221,7 +208,7 @@ impl CodeSnippet {
             code: record.code,
             language: record.lang.unwrap(),
             created_at: record.created_at.timestamp(),
-            updated_at,
+            updated_at: record.updated_at.map(|updated| updated.timestamp()),
         })
     }
 

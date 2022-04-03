@@ -29,11 +29,7 @@ async fn index(
 ) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
-    let flash_msg = if let Some(f) = flash {
-        Some(f.into_inner())
-    } else {
-        None
-    };
+    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::IndexContext {
         user,
@@ -99,11 +95,7 @@ async fn snippet_detail(
 ) -> Option<Template> {
     let pool = &db_state.pool;
     let snippet = models::CodeSnippet::from_id(pool, id).await?;
-    let flash_msg = if let Some(f) = flash {
-        Some(f.into_inner())
-    } else {
-        None
-    };
+    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::SnippetDetailContext {
         user,
@@ -122,10 +114,7 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
     let executor = Executor::new()
         .set_language(&snippet.language.to_lowercase())
         .set_version("*")
-        .add_file(
-            File::default()
-                .set_content(&snippet.code)
-        );
+        .add_file(File::default().set_content(&snippet.code));
 
     let response = piston_client.execute(&executor).await.ok()?;
     Some(response.run.output)
@@ -201,11 +190,7 @@ async fn register_api(
 
 #[get("/login")]
 fn login(flash: Option<FlashMessage<'_>>) -> Template {
-    let flash_msg = if let Some(f) = flash {
-        Some(f.into_inner())
-    } else {
-        None
-    };
+    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::LoginContext {
         form: &Context::default(),
