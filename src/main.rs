@@ -21,6 +21,8 @@ struct DBState {
     pool: PgPool,
 }
 
+// TODO: Code prettify option when posting.
+
 #[get("/")]
 async fn index(
     db_state: &State<DBState>,
