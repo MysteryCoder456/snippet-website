@@ -33,3 +33,13 @@ pub struct SnippetDetailContext {
     pub snippet: models::CodeSnippet,
     pub flash: Option<(String, String)>,
 }
+
+#[derive(Serialize)]
+pub struct ProfileContext {
+    pub user: Option<models::User>,
+    pub requested_user: models::User,
+    pub profile: models::Profile,
+    pub profile_image_url: String,
+    pub first_snippet: Option<models::CodeSnippet>,
+    pub latest_snippet: Option<models::CodeSnippet>,
+}

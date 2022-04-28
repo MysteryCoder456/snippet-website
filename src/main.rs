@@ -126,6 +126,28 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
     Some(result)
 }
 
+#[get("/profile/<user_id>")]
+async fn profile(user_id: i32, db_state: &State<DBState>, user: Option<models::User>) -> Option<Template> {
+    let pool = &db_state.pool;
+    let requested_user = models::User::from_id(pool, user_id).await?;
+    let user_profile = models::Profile::from_user_id(pool, user_id).await?;
+    let profile_image_url = if user_profile.default_avatar {
+        "/static/images/default_avatar.png".to_owned()
+    } else {
+        format!("/site_media/profile_avatars/{}.png", requested_user.id)
+    };
+
+    let ctx = contexts::ProfileContext {
+        user,
+        requested_user,
+        profile: user_profile,
+        profile_image_url,
+        first_snippet: None,
+        latest_snippet: None,
+    };
+    Some(Template::render("profile", ctx))
+}
+
 #[get("/register")]
 fn register() -> Template {
     let ctx = contexts::RegisterContext {
@@ -293,12 +315,14 @@ async fn rocket() -> _ {
                 add_snippet_api,
                 snippet_detail,
                 snippet_run,
+                profile,
                 register,
                 register_api,
                 login,
                 login_api,
-                logout
+                logout,
             ],
         )
         .mount("/static", FileServer::from("static"))
+        .mount("/site_media", FileServer::from("site_media"))
 }

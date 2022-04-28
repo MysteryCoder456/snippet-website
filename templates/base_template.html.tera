@@ -38,7 +38,7 @@
 
                     <div class="navbar-nav ms-auto">
                         {% if user %}
-                            <a href="/profile" class="nav-link">Logged in as <b>{{ user.username }}</b></a>
+                            <a href="/profile/{{ user.id }}" class="nav-link">Logged in as <b>{{ user.username }}</b></a>
                             <a href="/logout" class="nav-link">Logout</a>
                         {% else %}
                             <a href="/login" class="nav-link">Login</a>

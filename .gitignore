@@ -1,3 +1,4 @@
 /target
+site-media/
 .DS_Store
 .env
