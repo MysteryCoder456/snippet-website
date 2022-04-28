@@ -119,11 +119,7 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
         .add_file(File::default().set_content(&snippet.code));
 
     let response = piston_client.execute(&executor).await.ok()?;
-    let result = match response.compile {
-        Some(_) => response.run.output,
-        None => response.run.stderr,
-    };
-    Some(result)
+    Some(response.run.output)
 }
 
 #[get("/profile/<user_id>")]

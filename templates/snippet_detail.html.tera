@@ -6,7 +6,7 @@
 {% endblock title %}
 
 {% block main %}
-    {{ m::snippet(s=snippet, link=false) }}
+    {{ m::snippet(s=snippet, link=false, top_border=false) }}
 
     <button class="btn btn-outline-primary mb-2" id="run-btn" onclick="runCode()">Run Code</button>
     <pre style="display: none;" id="run-output"><code class="text-white language-plaintext mt-2"></code></pre>
