@@ -236,3 +236,31 @@ impl CodeSnippet {
         record.id
     }
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Profile {
+    pub user_id: i32,
+    pub bio: String,
+    pub occupation: String,
+    pub default_avatar: bool,
+}
+
+impl Profile {
+    pub async fn create(pool: &PgPool, user_id: i32) {
+        sqlx::query!("INSERT INTO profiles VALUES ($1)", user_id).execute(pool).await.unwrap();
+    }
+
+    pub async fn from_user_id(pool: &PgPool, user_id: i32) -> Option<Self> {
+        let result = sqlx::query!("SELECT * FROM profiles WHERE user_id = $1", user_id)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+
+        Some(Self {
+            user_id: result.user_id,
+            bio: result.bio,
+            occupation: result.occupation,
+            default_avatar: result.default_avatar,
+        })
+    }
+}

@@ -119,7 +119,11 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
         .add_file(File::default().set_content(&snippet.code));
 
     let response = piston_client.execute(&executor).await.ok()?;
-    Some(response.run.output)
+    let result = match response.compile {
+        Some(_) => response.run.output,
+        None => response.run.stderr,
+    };
+    Some(result)
 }
 
 #[get("/register")]
@@ -157,7 +161,10 @@ async fn register_api(
             }
 
             if username_valid && email_valid {
+                // Insert relevant data into database
                 let user_id = models::User::create(pool, username, email, password).await;
+                models::Profile::create(pool, user_id).await;
+
                 let auth_cookie = Cookie::new("current_user", user_id.to_string());
                 cookie_jar.add_private(auth_cookie);
 
