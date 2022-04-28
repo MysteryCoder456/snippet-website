@@ -21,12 +21,12 @@
     {% if latest_snippet and first_snippet %}
         <div class="pt-3 border-top">
             <h4>Latest Snippet:</h4>
-            {{ m::snippet(s=latest_snippet, link=true) }}
+            {{ m::snippet(s=latest_snippet, top_border=false) }}
         </div>
 
         <div class="pt-3 border-top">
             <h4>First Snippet:</h4>
-            {{ m::snippet(s=first_snippet, link=true) }}
+            {{ m::snippet(s=first_snippet, top_border=false) }}
         </div>
     {% else %}
         <p class="text-center pt-3 border-top">Doesn't seem like this person uses this site much...</p>

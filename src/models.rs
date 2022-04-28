@@ -121,6 +121,34 @@ impl User {
             salt: result.salt,
         })
     }
+
+    pub async fn get_oldest_snippet(&self, pool: &PgPool) -> Option<CodeSnippet> {
+        let result = sqlx::query!("SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at ASC", self.id).fetch_one(pool).await.ok()?;
+
+        Some(CodeSnippet {
+            id: result.id,
+            author: self.clone(),
+            title: result.title,
+            code: result.code,
+            language: result.lang,
+            created_at: result.created_at.timestamp(),
+            updated_at: result.updated_at.map(|updated| updated.timestamp()),
+        })
+    }
+
+    pub async fn get_newest_snippet(&self, pool: &PgPool) -> Option<CodeSnippet> {
+        let result = sqlx::query!("SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at DESC", self.id).fetch_one(pool).await.ok()?;
+
+        Some(CodeSnippet {
+            id: result.id,
+            author: self.clone(),
+            title: result.title,
+            code: result.code,
+            language: result.lang,
+            created_at: result.created_at.timestamp(),
+            updated_at: result.updated_at.map(|updated| updated.timestamp()),
+        })
+    }
 }
 
 impl Clone for User {
@@ -186,7 +214,7 @@ impl CodeSnippet {
                 author,
                 title: record.title,
                 code: record.code,
-                language: record.lang.unwrap(),
+                language: record.lang,
                 created_at: record.created_at.timestamp(),
                 updated_at: record.updated_at.map(|updated| updated.timestamp()),
             });
@@ -206,7 +234,7 @@ impl CodeSnippet {
             author: User::from_id(pool, record.author_id).await?,
             title: record.title,
             code: record.code,
-            language: record.lang.unwrap(),
+            language: record.lang,
             created_at: record.created_at.timestamp(),
             updated_at: record.updated_at.map(|updated| updated.timestamp()),
         })

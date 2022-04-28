@@ -136,14 +136,16 @@ async fn profile(user_id: i32, db_state: &State<DBState>, user: Option<models::U
     } else {
         format!("/site_media/profile_avatars/{}.png", requested_user.id)
     };
+    let first_snippet = requested_user.get_oldest_snippet(pool).await;
+    let latest_snippet = requested_user.get_newest_snippet(pool).await;
 
     let ctx = contexts::ProfileContext {
         user,
         requested_user,
         profile: user_profile,
         profile_image_url,
-        first_snippet: None,
-        latest_snippet: None,
+        first_snippet,
+        latest_snippet,
     };
     Some(Template::render("profile", ctx))
 }
