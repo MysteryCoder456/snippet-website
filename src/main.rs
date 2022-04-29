@@ -22,6 +22,7 @@ struct DBState {
 }
 
 // TODO: Code prettify option when posting.
+// TODO: fix pfp loading
 
 #[get("/")]
 async fn index(
@@ -134,7 +135,7 @@ async fn profile(
     let profile_image_url = if user_profile.default_avatar {
         "/static/images/default_avatar.png".to_owned()
     } else {
-        format!("/site_media/profile_avatars/{}.png", requested_user.id)
+        format!("/site_media/profile_avatars/{}.jpg", requested_user.id)
     };
     let first_snippet = requested_user.get_oldest_snippet(pool).await;
     let latest_snippet = requested_user.get_newest_snippet(pool).await;
@@ -147,17 +148,17 @@ async fn profile(
         first_snippet,
         latest_snippet,
     };
-    Some(Template::render("profile", ctx))
+    Some(Template::render("profile", &ctx))
 }
 
 #[get("/profile/edit")]
 async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template {
     let pool = &db_state.pool;
-    let user_profile = models::Profile::from_user_id(pool, user.id).await.unwrap();
+    let user_profile = models::Profile::from_user_id(pool, user.id).await.expect(format!("Profile not found for user {}", user.id).as_str());
     let profile_image_url = if user_profile.default_avatar {
         "/static/images/default_avatar.png".to_owned()
     } else {
-        format!("/site_media/profile_avatars/{}.png", user.id)
+        format!("/site_media/profile_avatars/{}.jpg", user.id)
     };
 
     let ctx = contexts::EditProfileContext {
@@ -166,7 +167,7 @@ async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template
         profile_image_url,
         form: &Context::default(),
     };
-    Template::render("edit_profile", ctx)
+    Template::render("edit_profile", &ctx)
 }
 
 #[get("/profile/edit", rank = 2)]
@@ -177,12 +178,70 @@ fn edit_profile_no_auth() -> Flash<Redirect> {
     )
 }
 
-#[post("/profile/edit")]
+#[post("/profile/edit", data = "<form>")]
 async fn edit_profile_api(
+    mut form: Form<Contextual<'_, forms::EditProfileFrom<'_>>>,
     db_state: &State<DBState>,
     user: models::User,
 ) -> Result<Redirect, Template> {
-    todo!()
+    let pool = &db_state.pool;
+    let user_profile = models::Profile::from_user_id(pool, user.id).await.expect(format!("Profile not found for user {}", user.id).as_str());
+
+    match form.value {
+        Some(ref mut new_profile) => {
+            let bio = new_profile.bio;
+            let occupation = new_profile.occupation;
+            let mut use_default_avatar = user_profile.default_avatar;
+
+            if let Some(avatar_name) = new_profile.avatar.raw_name() {
+                let allowed_formats = ["png", "jpg", "jpeg"];
+
+                if let Some((_, ext_name)) = avatar_name.dangerous_unsafe_unsanitized_raw().as_str().rsplit_once(".") {
+                    if allowed_formats.contains(&ext_name) {
+                        let full_path = format!("site_media/profile_avatars/{}.{}", user.id, ext_name);
+                        new_profile.avatar.persist_to(full_path).await.unwrap();
+                        use_default_avatar = false;
+                    } else {
+                        let formats_str = allowed_formats.map(|s| s.to_uppercase()).join(", ");
+                        let error = Error::validation(format!("Invalid file format: {}. Must be {}.", ext_name, formats_str)).with_name("avatar");
+                        form.context.push_error(error);
+
+                        let profile_image_url = if user_profile.default_avatar {
+                            "/static/images/default_avatar.png".to_owned()
+                        } else {
+                            format!("/site_media/profile_avatars/{}.jpg", user.id)
+                        };
+
+                        let ctx = contexts::EditProfileContext {
+                            user,
+                            profile: user_profile,
+                            profile_image_url,
+                            form: &form.context,
+                        };
+                        return Err(Template::render("edit_profile", &ctx));
+                    }
+                }
+            }
+
+            models::Profile::edit(pool, user.id, bio, occupation, use_default_avatar).await;
+            Ok(Redirect::to(uri!(profile(user_id = user.id))))
+        }
+        None => {
+            let profile_image_url = if user_profile.default_avatar {
+                "/static/images/default_avatar.png".to_owned()
+            } else {
+                format!("/site_media/profile_avatars/{}.jpg", user.id)
+            };
+
+            let ctx = contexts::EditProfileContext {
+                user,
+                profile: user_profile,
+                profile_image_url,
+                form: &form.context,
+            };
+            Err(Template::render("edit_profile", &ctx))
+        }
+    }
 }
 
 #[get("/register")]

@@ -306,4 +306,8 @@ impl Profile {
             default_avatar: result.default_avatar,
         })
     }
+
+    pub async fn edit(pool: &PgPool, user_id: i32, bio: &str, occupation: &str, default_avatar: bool) {
+        sqlx::query!("UPDATE profiles SET bio = $1, occupation = $2, default_avatar = $3 WHERE user_id = $4", bio, occupation, default_avatar, user_id).execute(pool).await.unwrap();
+    }
 }

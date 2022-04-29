@@ -1,4 +1,4 @@
-use rocket::{fs::TempFile, http::ContentType};
+use rocket::fs::TempFile;
 
 #[derive(FromForm)]
 pub struct RegisterForm<'a> {
@@ -40,7 +40,5 @@ pub struct EditProfileFrom<'a> {
     #[field(validate = len(2..=25).or_else(msg!("Occupation must be between 2 and 25 characters long")))]
     pub occupation: &'a str,
 
-    #[field(validate = ext(ContentType::PNG))]
-    #[field(validate = ext(ContentType::JPEG))]
     pub avatar: TempFile<'a>,
 }
