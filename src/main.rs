@@ -123,7 +123,11 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
 }
 
 #[get("/profile/<user_id>")]
-async fn profile(user_id: i32, db_state: &State<DBState>, user: Option<models::User>) -> Option<Template> {
+async fn profile(
+    user_id: i32,
+    db_state: &State<DBState>,
+    user: Option<models::User>,
+) -> Option<Template> {
     let pool = &db_state.pool;
     let requested_user = models::User::from_id(pool, user_id).await?;
     let user_profile = models::Profile::from_user_id(pool, user_id).await?;
@@ -144,6 +148,41 @@ async fn profile(user_id: i32, db_state: &State<DBState>, user: Option<models::U
         latest_snippet,
     };
     Some(Template::render("profile", ctx))
+}
+
+#[get("/profile/edit")]
+async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template {
+    let pool = &db_state.pool;
+    let user_profile = models::Profile::from_user_id(pool, user.id).await.unwrap();
+    let profile_image_url = if user_profile.default_avatar {
+        "/static/images/default_avatar.png".to_owned()
+    } else {
+        format!("/site_media/profile_avatars/{}.png", user.id)
+    };
+
+    let ctx = contexts::EditProfileContext {
+        user,
+        profile: user_profile,
+        profile_image_url,
+        form: &Context::default(),
+    };
+    Template::render("edit_profile", ctx)
+}
+
+#[get("/profile/edit", rank = 2)]
+fn edit_profile_no_auth() -> Flash<Redirect> {
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to edit your profile",
+    )
+}
+
+#[post("/profile/edit")]
+async fn edit_profile_api(
+    db_state: &State<DBState>,
+    user: models::User,
+) -> Result<Redirect, Template> {
+    todo!()
 }
 
 #[get("/register")]
@@ -314,6 +353,9 @@ async fn rocket() -> _ {
                 snippet_detail,
                 snippet_run,
                 profile,
+                edit_profile,
+                edit_profile_no_auth,
+                edit_profile_api,
                 register,
                 register_api,
                 login,

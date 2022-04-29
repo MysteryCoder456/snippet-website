@@ -123,7 +123,13 @@ impl User {
     }
 
     pub async fn get_oldest_snippet(&self, pool: &PgPool) -> Option<CodeSnippet> {
-        let result = sqlx::query!("SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at ASC", self.id).fetch_one(pool).await.ok()?;
+        let result = sqlx::query!(
+            "SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at ASC",
+            self.id
+        )
+        .fetch_one(pool)
+        .await
+        .ok()?;
 
         Some(CodeSnippet {
             id: result.id,
@@ -137,7 +143,13 @@ impl User {
     }
 
     pub async fn get_newest_snippet(&self, pool: &PgPool) -> Option<CodeSnippet> {
-        let result = sqlx::query!("SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at DESC", self.id).fetch_one(pool).await.ok()?;
+        let result = sqlx::query!(
+            "SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at DESC",
+            self.id
+        )
+        .fetch_one(pool)
+        .await
+        .ok()?;
 
         Some(CodeSnippet {
             id: result.id,
@@ -275,7 +287,10 @@ pub struct Profile {
 
 impl Profile {
     pub async fn create(pool: &PgPool, user_id: i32) {
-        sqlx::query!("INSERT INTO profiles VALUES ($1)", user_id).execute(pool).await.unwrap();
+        sqlx::query!("INSERT INTO profiles VALUES ($1)", user_id)
+            .execute(pool)
+            .await
+            .unwrap();
     }
 
     pub async fn from_user_id(pool: &PgPool, user_id: i32) -> Option<Self> {

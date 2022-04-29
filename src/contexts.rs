@@ -43,3 +43,11 @@ pub struct ProfileContext {
     pub first_snippet: Option<models::CodeSnippet>,
     pub latest_snippet: Option<models::CodeSnippet>,
 }
+
+#[derive(Serialize)]
+pub struct EditProfileContext<'a, 'b> {
+    pub user: models::User,
+    pub profile: models::Profile,
+    pub profile_image_url: String,
+    pub form: &'a Context<'b>
+}
