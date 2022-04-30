@@ -282,7 +282,7 @@ pub struct Profile {
     pub user_id: i32,
     pub bio: String,
     pub occupation: String,
-    pub default_avatar: bool,
+    pub avatar_path: Option<String>,
 }
 
 impl Profile {
@@ -303,11 +303,28 @@ impl Profile {
             user_id: result.user_id,
             bio: result.bio,
             occupation: result.occupation,
-            default_avatar: result.default_avatar,
+            avatar_path: result.avatar_path,
         })
     }
 
-    pub async fn edit(pool: &PgPool, user_id: i32, bio: &str, occupation: &str, default_avatar: bool) {
-        sqlx::query!("UPDATE profiles SET bio = $1, occupation = $2, default_avatar = $3 WHERE user_id = $4", bio, occupation, default_avatar, user_id).execute(pool).await.unwrap();
+    pub async fn edit(pool: &PgPool, user_id: i32, bio: &str, occupation: &str, avatar_path: &str) {
+        sqlx::query!(
+            "UPDATE profiles SET bio = $1, occupation = $2, avatar_path = $3 WHERE user_id = $4",
+            bio,
+            occupation,
+            avatar_path,
+            user_id
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    pub fn display_avatar_path(&self) -> String {
+        if let Some(ref avatar_path) = self.avatar_path {
+            avatar_path.clone().to_owned()
+        } else {
+            format!("/static/images/default_avatar.png")
+        }
     }
 }

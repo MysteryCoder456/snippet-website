@@ -49,5 +49,5 @@ pub struct EditProfileContext<'a, 'b> {
     pub user: models::User,
     pub profile: models::Profile,
     pub profile_image_url: String,
-    pub form: &'a Context<'b>
+    pub form: &'a Context<'b>,
 }

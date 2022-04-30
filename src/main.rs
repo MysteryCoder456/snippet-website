@@ -22,7 +22,6 @@ struct DBState {
 }
 
 // TODO: Code prettify option when posting.
-// TODO: fix pfp loading
 
 #[get("/")]
 async fn index(
@@ -130,13 +129,10 @@ async fn profile(
     user: Option<models::User>,
 ) -> Option<Template> {
     let pool = &db_state.pool;
+
     let requested_user = models::User::from_id(pool, user_id).await?;
     let user_profile = models::Profile::from_user_id(pool, user_id).await?;
-    let profile_image_url = if user_profile.default_avatar {
-        "/static/images/default_avatar.png".to_owned()
-    } else {
-        format!("/site_media/profile_avatars/{}.jpg", requested_user.id)
-    };
+    let profile_image_url = user_profile.display_avatar_path();
     let first_snippet = requested_user.get_oldest_snippet(pool).await;
     let latest_snippet = requested_user.get_newest_snippet(pool).await;
 
@@ -154,12 +150,10 @@ async fn profile(
 #[get("/profile/edit")]
 async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template {
     let pool = &db_state.pool;
-    let user_profile = models::Profile::from_user_id(pool, user.id).await.expect(format!("Profile not found for user {}", user.id).as_str());
-    let profile_image_url = if user_profile.default_avatar {
-        "/static/images/default_avatar.png".to_owned()
-    } else {
-        format!("/site_media/profile_avatars/{}.jpg", user.id)
-    };
+    let user_profile = models::Profile::from_user_id(pool, user.id)
+        .await
+        .expect(format!("Profile not found for user {}", user.id).as_str());
+    let profile_image_url = user_profile.display_avatar_path();
 
     let ctx = contexts::EditProfileContext {
         user,
@@ -185,33 +179,55 @@ async fn edit_profile_api(
     user: models::User,
 ) -> Result<Redirect, Template> {
     let pool = &db_state.pool;
-    let user_profile = models::Profile::from_user_id(pool, user.id).await.expect(format!("Profile not found for user {}", user.id).as_str());
+    let user_profile = models::Profile::from_user_id(pool, user.id)
+        .await
+        .expect(format!("Profile not found for user {}", user.id).as_str());
 
     match form.value {
         Some(ref mut new_profile) => {
             let bio = new_profile.bio;
             let occupation = new_profile.occupation;
-            let mut use_default_avatar = user_profile.default_avatar;
+            let mut new_avatar_path = user_profile.display_avatar_path();
 
             if let Some(avatar_name) = new_profile.avatar.raw_name() {
                 let allowed_formats = ["png", "jpg", "jpeg"];
 
-                if let Some((_, ext_name)) = avatar_name.dangerous_unsafe_unsanitized_raw().as_str().rsplit_once(".") {
-                    if allowed_formats.contains(&ext_name) {
-                        let full_path = format!("site_media/profile_avatars/{}.{}", user.id, ext_name);
-                        new_profile.avatar.persist_to(full_path).await.unwrap();
-                        use_default_avatar = false;
+                if let Some((_, ext_name)) = avatar_name
+                    .dangerous_unsafe_unsanitized_raw()
+                    .as_str()
+                    .rsplit_once(".")
+                {
+                    if allowed_formats.contains(&ext_name.to_lowercase().as_str()) {
+                        new_avatar_path =
+                            format!("/site_media/profile_avatars/{}.{}", user.id, ext_name);
+                        let mut save_avatar = true;
+
+                        // Remove existing avatar if exists
+                        if let Some(ref old_avatar_path) = user_profile.avatar_path {
+                            if std::path::Path::new(old_avatar_path).exists() {
+                                // Save the new avatar if old avatar is removable OR if the new and old avatars have different paths
+                                save_avatar = std::fs::remove_file(&old_avatar_path).is_ok() || *old_avatar_path != new_avatar_path;
+                            }
+                        }
+
+                        if save_avatar {
+                            new_profile
+                                .avatar
+                                .persist_to(new_avatar_path.replacen("/", "", 1))
+                                .await
+                                .unwrap();
+                        }
                     } else {
-                        let formats_str = allowed_formats.map(|s| s.to_uppercase()).join(", ");
-                        let error = Error::validation(format!("Invalid file format: {}. Must be {}.", ext_name, formats_str)).with_name("avatar");
+                        let formats_str = allowed_formats.join(", ");
+                        let error = Error::validation(format!(
+                            "Invalid file format: {}. Must be {}.",
+                            ext_name.to_uppercase(),
+                            formats_str.to_uppercase()
+                        ))
+                        .with_name("avatar");
                         form.context.push_error(error);
 
-                        let profile_image_url = if user_profile.default_avatar {
-                            "/static/images/default_avatar.png".to_owned()
-                        } else {
-                            format!("/site_media/profile_avatars/{}.jpg", user.id)
-                        };
-
+                        let profile_image_url = user_profile.display_avatar_path();
                         let ctx = contexts::EditProfileContext {
                             user,
                             profile: user_profile,
@@ -223,16 +239,11 @@ async fn edit_profile_api(
                 }
             }
 
-            models::Profile::edit(pool, user.id, bio, occupation, use_default_avatar).await;
+            models::Profile::edit(pool, user.id, bio, occupation, &new_avatar_path).await;
             Ok(Redirect::to(uri!(profile(user_id = user.id))))
         }
         None => {
-            let profile_image_url = if user_profile.default_avatar {
-                "/static/images/default_avatar.png".to_owned()
-            } else {
-                format!("/site_media/profile_avatars/{}.jpg", user.id)
-            };
-
+            let profile_image_url = user_profile.display_avatar_path();
             let ctx = contexts::EditProfileContext {
                 user,
                 profile: user_profile,
