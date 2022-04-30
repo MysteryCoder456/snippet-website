@@ -120,7 +120,7 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
 
     let response = piston_client.execute(&executor).await.ok()?;
     let result = match response.compile {
-        Some(c) => format!("{}\n{}", c.output, response.run.output),
+        Some(c) => format!("{}{}", c.output, response.run.output),
         None => response.run.output,
     };
     Some(result)
