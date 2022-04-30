@@ -2,7 +2,7 @@
 {% extends "base_template" %}
 
 {% block title %}
-    Profile
+    {{ requested_user.username }}'s Profile
 {% endblock title %}
 
 {% block main %}
