@@ -9,3 +9,5 @@ address = "0.0.0.0"
 port = 8050
 secret_key = "bZ1ZA3Fxv8yfQZDpNbDZjYqPBkLYbxK4C7sDinkEZWc="
 limits.file = "3MiB"
+tls.certs = "private/snippet.tk.pem"
+tls.key = "private/snippet.tk.key"

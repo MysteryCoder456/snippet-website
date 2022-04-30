@@ -1,4 +1,5 @@
 /target
 site_media/
+private/
 .DS_Store
 .env
