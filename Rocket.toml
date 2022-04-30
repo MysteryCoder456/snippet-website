@@ -2,8 +2,10 @@
 address = "127.0.0.1"
 port = 8000
 secret_key = "fM8kK7dSFPAuwvEEIo53pt1tAHR5+HOk0+OdVBlQ0k0="
+limits.file = "15MiB"
 
 [release]
 address = "0.0.0.0"
 port = 8050
 secret_key = "bZ1ZA3Fxv8yfQZDpNbDZjYqPBkLYbxK4C7sDinkEZWc="
+limits.file = "3MiB"
