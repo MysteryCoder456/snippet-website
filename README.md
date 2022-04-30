@@ -1,4 +1,3 @@
 # Snippet
 
-Instagram but people judge you on your code rather than naked pictures of you.
-Possibly a million dollar startup idea??
+This is the old version made in Python and Django. See the [`main` branch](https://github.com/MysteryCoder456/snippet-website/)
