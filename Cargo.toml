@@ -15,7 +15,7 @@ sqlx = { version = "^0.5", features = [
 serde = { version = "^1.0", features = ["derive"] }
 piston_rs = "^0.4"
 indexmap = "^1.8"
-uuid = "^0.8"
+uuid = { version = "^1.0", features = ["v4", "fast-rng"] }
 rand = "^0.8"
 sha256 = "^1.0"
 dotenv = "^0.15"

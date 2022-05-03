@@ -307,7 +307,13 @@ impl Profile {
         })
     }
 
-    pub async fn edit(pool: &PgPool, user_id: i32, bio: &str, occupation: &str, avatar_path: &str) {
+    pub async fn edit(
+        pool: &PgPool,
+        user_id: i32,
+        bio: &str,
+        occupation: &str,
+        avatar_path: Option<String>,
+    ) {
         sqlx::query!(
             "UPDATE profiles SET bio = $1, occupation = $2, avatar_path = $3 WHERE user_id = $4",
             bio,
@@ -322,7 +328,7 @@ impl Profile {
 
     pub fn display_avatar_path(&self) -> String {
         if let Some(ref avatar_path) = self.avatar_path {
-            avatar_path.clone().to_owned()
+            avatar_path.clone()
         } else {
             format!("/static/images/default_avatar.png")
         }

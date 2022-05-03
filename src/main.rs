@@ -12,6 +12,7 @@ use rocket::{
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use uuid::Uuid;
 
 mod contexts;
 mod forms;
@@ -191,7 +192,7 @@ async fn edit_profile_api(
         Some(ref mut new_profile) => {
             let bio = new_profile.bio;
             let occupation = new_profile.occupation;
-            let mut new_avatar_path = user_profile.display_avatar_path();
+            let mut new_avatar_path = user_profile.avatar_path.clone();
 
             if let Some(avatar_name) = new_profile.avatar.raw_name() {
                 let allowed_formats = ["png", "jpg", "jpeg"];
@@ -202,25 +203,25 @@ async fn edit_profile_api(
                     .rsplit_once(".")
                 {
                     if allowed_formats.contains(&ext_name.to_lowercase().as_str()) {
-                        new_avatar_path =
-                            format!("/site_media/profile_avatars/{}.{}", user.id, ext_name);
-                        let mut save_avatar = true;
+                        let avatar_uuid = Uuid::new_v4();
+                        new_avatar_path = Some(format!(
+                            "/site_media/profile_avatars/{}.{}",
+                            avatar_uuid.to_string(),
+                            ext_name
+                        ));
 
                         // Remove existing avatar if exists
                         if let Some(ref old_avatar_path) = user_profile.avatar_path {
                             if std::path::Path::new(old_avatar_path).exists() {
-                                // Save the new avatar if old avatar is removable OR if the new and old avatars have different paths
-                                save_avatar = std::fs::remove_file(&old_avatar_path).is_ok() || *old_avatar_path != new_avatar_path;
+                                let _ = std::fs::remove_file(old_avatar_path);
                             }
                         }
 
-                        if save_avatar {
-                            new_profile
-                                .avatar
-                                .persist_to(new_avatar_path.replacen("/", "", 1))
-                                .await
-                                .unwrap();
-                        }
+                        new_profile
+                            .avatar
+                            .persist_to(new_avatar_path.as_ref().unwrap().replacen("/", "", 1))
+                            .await
+                            .unwrap();
                     } else {
                         let formats_str = allowed_formats.join(", ");
                         let error = Error::validation(format!(
@@ -243,7 +244,7 @@ async fn edit_profile_api(
                 }
             }
 
-            models::Profile::edit(pool, user.id, bio, occupation, &new_avatar_path).await;
+            models::Profile::edit(pool, user.id, bio, occupation, new_avatar_path).await;
             Ok(Redirect::to(uri!(profile(user_id = user.id))))
         }
         None => {
