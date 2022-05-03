@@ -218,7 +218,7 @@ async fn edit_profile_api(
                             if std::path::Path::new(&fs_path).exists() {
                                 tokio::spawn(async move {
                                     match tokio::fs::remove_file(fs_path).await {
-                                        Ok(_) => {},
+                                        Ok(_) => {}
                                         Err(e) => println!("Couldn't delete old avatar: {}", e),
                                     }
                                 });
