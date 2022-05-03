@@ -44,10 +44,11 @@ async fn index(
 }
 
 #[get("/new")]
-fn add_snippet(user: models::User) -> Template {
+fn add_snippet(user: models::User, flash: Option<FlashMessage<'_>>) -> Template {
     let ctx = contexts::AddSnippetContext {
         user,
         form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("add_snippet", &ctx)
 }
@@ -84,6 +85,7 @@ async fn add_snippet_api(
             let ctx = contexts::AddSnippetContext {
                 user,
                 form: &form.context,
+                flash: None,
             };
             Err(Template::render("add_snippet", &ctx))
         }
@@ -154,7 +156,11 @@ async fn profile(
 }
 
 #[get("/profile/edit")]
-async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template {
+async fn edit_profile(
+    db_state: &State<DBState>,
+    user: models::User,
+    flash: Option<FlashMessage<'_>>,
+) -> Template {
     let pool = &db_state.pool;
     let user_profile = models::Profile::from_user_id(pool, user.id)
         .await
@@ -166,6 +172,7 @@ async fn edit_profile(db_state: &State<DBState>, user: models::User) -> Template
         profile: user_profile,
         profile_image_url,
         form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("edit_profile", &ctx)
 }
@@ -246,6 +253,7 @@ async fn edit_profile_api(
                             profile: user_profile,
                             profile_image_url,
                             form: &form.context,
+                            flash: None,
                         };
                         return Err(Template::render("edit_profile", &ctx));
                     }
@@ -262,6 +270,7 @@ async fn edit_profile_api(
                 profile: user_profile,
                 profile_image_url,
                 form: &form.context,
+                flash: None,
             };
             Err(Template::render("edit_profile", &ctx))
         }

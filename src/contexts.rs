@@ -25,6 +25,7 @@ pub struct LoginContext<'a, 'b> {
 pub struct AddSnippetContext<'a, 'b> {
     pub user: models::User,
     pub form: &'a Context<'b>,
+    pub flash: Option<(String, String)>,
 }
 
 #[derive(Serialize)]
@@ -50,4 +51,5 @@ pub struct EditProfileContext<'a, 'b> {
     pub profile: models::Profile,
     pub profile_image_url: String,
     pub form: &'a Context<'b>,
+    pub flash: Option<(String, String)>,
 }
