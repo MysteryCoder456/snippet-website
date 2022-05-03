@@ -12,6 +12,7 @@ use rocket::{
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use tokio;
 use uuid::Uuid;
 
 mod contexts;
@@ -211,9 +212,16 @@ async fn edit_profile_api(
                         ));
 
                         // Remove existing avatar if exists
-                        if let Some(ref old_avatar_path) = user_profile.avatar_path {
-                            if std::path::Path::new(old_avatar_path).exists() {
-                                let _ = std::fs::remove_file(old_avatar_path);
+                        if let Some(old_avatar_path) = user_profile.avatar_path {
+                            let fs_path = old_avatar_path.replacen("/", "", 1);
+
+                            if std::path::Path::new(&fs_path).exists() {
+                                tokio::spawn(async move {
+                                    match tokio::fs::remove_file(fs_path).await {
+                                        Ok(_) => {},
+                                        Err(e) => println!("Couldn't delete old avatar: {}", e),
+                                    }
+                                });
                             }
                         }
 

@@ -12,6 +12,7 @@ sqlx = { version = "^0.5", features = [
     "postgres",
     "chrono"
 ] }
+tokio = { version = "^1.18", features = ["fs"] }
 serde = { version = "^1.0", features = ["derive"] }
 piston_rs = "^0.4"
 indexmap = "^1.8"
