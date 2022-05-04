@@ -12,7 +12,6 @@ use rocket::{
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use tokio;
 use uuid::Uuid;
 
 mod contexts;
@@ -164,7 +163,7 @@ async fn edit_profile(
     let pool = &db_state.pool;
     let user_profile = models::Profile::from_user_id(pool, user.id)
         .await
-        .expect(format!("Profile not found for user {}", user.id).as_str());
+        .unwrap_or_else(|| panic!("Profile not found for user {}", user.id));
     let profile_image_url = user_profile.display_avatar_path();
 
     let ctx = contexts::EditProfileContext {
@@ -194,7 +193,7 @@ async fn edit_profile_api(
     let pool = &db_state.pool;
     let user_profile = models::Profile::from_user_id(pool, user.id)
         .await
-        .expect(format!("Profile not found for user {}", user.id).as_str());
+        .unwrap_or_else(|| panic!("Profile not found for user {}", user.id));
 
     match form.value {
         Some(ref mut new_profile) => {
@@ -208,19 +207,19 @@ async fn edit_profile_api(
                 if let Some((_, ext_name)) = avatar_name
                     .dangerous_unsafe_unsanitized_raw()
                     .as_str()
-                    .rsplit_once(".")
+                    .rsplit_once('.')
                 {
                     if allowed_formats.contains(&ext_name.to_lowercase().as_str()) {
                         let avatar_uuid = Uuid::new_v4();
                         new_avatar_path = Some(format!(
                             "/site_media/profile_avatars/{}.{}",
-                            avatar_uuid.to_string(),
+                            avatar_uuid,
                             ext_name
                         ));
 
                         // Remove existing avatar if exists
                         if let Some(old_avatar_path) = user_profile.avatar_path {
-                            let fs_path = old_avatar_path.replacen("/", "", 1);
+                            let fs_path = old_avatar_path.replacen('/', "", 1);
 
                             if std::path::Path::new(&fs_path).exists() {
                                 tokio::spawn(async move {
@@ -234,7 +233,7 @@ async fn edit_profile_api(
 
                         new_profile
                             .avatar
-                            .persist_to(new_avatar_path.as_ref().unwrap().replacen("/", "", 1))
+                            .persist_to(new_avatar_path.as_ref().unwrap().replacen('/', "", 1))
                             .await
                             .unwrap();
                     } else {

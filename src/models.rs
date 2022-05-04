@@ -330,7 +330,7 @@ impl Profile {
         if let Some(ref avatar_path) = self.avatar_path {
             avatar_path.clone()
         } else {
-            format!("/static/images/default_avatar.png")
+            "/static/images/default_avatar.png".to_owned()
         }
     }
 }
