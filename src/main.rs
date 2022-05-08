@@ -213,8 +213,7 @@ async fn edit_profile_api(
                         let avatar_uuid = Uuid::new_v4();
                         new_avatar_path = Some(format!(
                             "/site_media/profile_avatars/{}.{}",
-                            avatar_uuid,
-                            ext_name
+                            avatar_uuid, ext_name
                         ));
 
                         // Remove existing avatar if exists
@@ -423,6 +422,17 @@ fn logout(cookie_jar: &CookieJar<'_>) -> Flash<Redirect> {
 #[launch]
 async fn rocket() -> _ {
     dotenv::dotenv().ok();
+
+    // Ensure all the required directories are present
+    let required_dirs = ["site_media/profile_avatars"];
+    for dir in required_dirs {
+        if !std::path::Path::new(dir).exists() {
+            match tokio::fs::create_dir_all(dir).await {
+                Ok(_) => println!("Created {} directory", dir),
+                Err(e) => println!("Unable to create directory {}:\n{}", dir, e),
+            }
+        }
+    }
 
     let db_url = env!("DATABASE_URL");
     let pool = PgPoolOptions::new()
