@@ -52,3 +52,16 @@ code {
     aspect-ratio: 1;
     box-shadow: 0 0 15px 2px black;
 }
+
+.comment {
+    background: lightgray;
+    border-radius: 17px;
+    box-shadow: 0 0 10px 2px gray;
+    display: flex;
+}
+
+.comment .profile-pic {
+    width: 6%;
+    aspect-ration: 1;
+    box-shadow: 0 0 4px 2px black;
+}

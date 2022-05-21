@@ -311,15 +311,21 @@ impl CodeSnippet {
         .await
         .unwrap();
 
-        results
-            .iter()
-            .map(|r| Comment {
-                id: r.id,
-                code_snippet: self.clone(),
-                author_id: r.author_id,
-                content: r.content.clone(),
-            })
-            .collect()
+        let mut comments = vec![];
+
+        for record in results {
+            if let Some(author) = User::from_id(pool, record.id).await {
+                comments.push(Comment {
+                    id: record.id,
+                    code_snippet: self.clone(),
+                    author: author.clone(),
+                    author_avatar_url: author.display_avatar_path(),
+                    content: record.content.clone(),
+                });
+            }
+        }
+
+        comments
     }
 }
 
@@ -327,6 +333,7 @@ impl CodeSnippet {
 pub struct Comment {
     pub id: i32,
     pub code_snippet: CodeSnippet,
-    pub author_id: i32,
+    pub author: User,
+    pub author_avatar_url: String,
     pub content: String,
 }
