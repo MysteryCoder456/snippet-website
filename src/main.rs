@@ -153,16 +153,14 @@ async fn profile(
     let pool = &db_state.pool;
 
     let requested_user = models::User::from_id(pool, user_id).await?;
-    let user_profile = models::Profile::from_user_id(pool, user_id).await?;
-    let profile_image_url = user_profile.display_avatar_path();
+    let avatar_image_url = requested_user.display_avatar_path();
     let first_snippet = requested_user.get_oldest_snippet(pool).await;
     let latest_snippet = requested_user.get_newest_snippet(pool).await;
 
     let ctx = contexts::ProfileContext {
         user,
         requested_user,
-        profile: user_profile,
-        profile_image_url,
+        avatar_image_url,
         first_snippet,
         latest_snippet,
     };
@@ -170,21 +168,12 @@ async fn profile(
 }
 
 #[get("/profile/edit")]
-async fn edit_profile(
-    db_state: &State<DBState>,
-    user: models::User,
-    flash: Option<FlashMessage<'_>>,
-) -> Template {
-    let pool = &db_state.pool;
-    let user_profile = models::Profile::from_user_id(pool, user.id)
-        .await
-        .unwrap_or_else(|| panic!("Profile not found for user {}", user.id));
-    let profile_image_url = user_profile.display_avatar_path();
+async fn edit_profile(user: models::User, flash: Option<FlashMessage<'_>>) -> Template {
+    let avatar_image_url = user.display_avatar_path();
 
     let ctx = contexts::EditProfileContext {
         user,
-        profile: user_profile,
-        profile_image_url,
+        avatar_image_url,
         form: &Context::default(),
         flash: flash.map(|f| f.into_inner()),
     };
@@ -203,18 +192,15 @@ fn edit_profile_no_auth() -> Flash<Redirect> {
 async fn edit_profile_api(
     mut form: Form<Contextual<'_, forms::EditProfileFrom<'_>>>,
     db_state: &State<DBState>,
-    user: models::User,
+    mut user: models::User,
 ) -> Result<Redirect, Template> {
     let pool = &db_state.pool;
-    let user_profile = models::Profile::from_user_id(pool, user.id)
-        .await
-        .unwrap_or_else(|| panic!("Profile not found for user {}", user.id));
 
     match form.value {
         Some(ref mut new_profile) => {
             let bio = new_profile.bio;
             let occupation = new_profile.occupation;
-            let mut new_avatar_path = user_profile.avatar_path.clone();
+            let mut new_avatar_path = user.avatar_path.clone();
 
             if let Some(avatar_name) = new_profile.avatar.raw_name() {
                 let allowed_formats = ["png", "jpg", "jpeg"];
@@ -232,7 +218,7 @@ async fn edit_profile_api(
                         ));
 
                         // Remove existing avatar if exists
-                        if let Some(old_avatar_path) = user_profile.avatar_path {
+                        if let Some(old_avatar_path) = &user.avatar_path {
                             let fs_path = old_avatar_path.replacen('/', "", 1);
 
                             if std::path::Path::new(&fs_path).exists() {
@@ -260,11 +246,10 @@ async fn edit_profile_api(
                         .with_name("avatar");
                         form.context.push_error(error);
 
-                        let profile_image_url = user_profile.display_avatar_path();
+                        let profile_image_url = user.display_avatar_path();
                         let ctx = contexts::EditProfileContext {
                             user,
-                            profile: user_profile,
-                            profile_image_url,
+                            avatar_image_url: profile_image_url,
                             form: &form.context,
                             flash: None,
                         };
@@ -273,15 +258,15 @@ async fn edit_profile_api(
                 }
             }
 
-            models::Profile::edit(pool, user.id, bio, occupation, new_avatar_path).await;
+            user.edit_profile(pool, bio, occupation, new_avatar_path.clone())
+                .await;
             Ok(Redirect::to(uri!(profile(user_id = user.id))))
         }
         None => {
-            let profile_image_url = user_profile.display_avatar_path();
+            let profile_image_url = user.display_avatar_path();
             let ctx = contexts::EditProfileContext {
                 user,
-                profile: user_profile,
-                profile_image_url,
+                avatar_image_url: profile_image_url,
                 form: &form.context,
                 flash: None,
             };
@@ -325,9 +310,8 @@ async fn register_api(
             }
 
             if username_valid && email_valid {
-                // Insert relevant data into database
+                // Insert new user into database
                 let user_id = models::User::create(pool, username, email, password).await;
-                models::Profile::create(pool, user_id).await;
 
                 let auth_cookie = Cookie::new("current_user", user_id.to_string());
                 cookie_jar.add_private(auth_cookie);

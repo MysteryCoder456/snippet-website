@@ -7,10 +7,10 @@
 
 {% block main %}
     <div class="media pt-3 pb-2 text-center">
-        <img class="rounded-circle profile-pic" src="{{ profile_image_url }}" alt="{{ requested_user.username }}'s Profile Picture">
+        <img class="rounded-circle profile-pic" src="{{ avatar_image_url }}" alt="{{ requested_user.username }}'s Profile Picture">
         <p class="display-2 mt-2">{{ requested_user.username }}</p>
-        <p><strong>Occupation:</strong> {{ profile.occupation }}</p>
-        <p>{{ profile.bio }}</p>
+        <p><strong>Occupation:</strong> {{ requested_user.occupation }}</p>
+        <p>{{ requested_user.bio }}</p>
         {% if requested_user == user %}
             <a href="/profile/edit" class="text-muted">
                 Edit

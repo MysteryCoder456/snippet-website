@@ -26,7 +26,7 @@ fn generate_hash(password: &str, salt: &str) -> String {
     hash
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct User {
     pub id: i32,
     pub username: String,
@@ -34,6 +34,11 @@ pub struct User {
     pub password: String,
     pub created_at: i64,
     pub salt: String,
+
+    // Profile fields
+    pub bio: String,
+    pub occupation: String,
+    pub avatar_path: Option<String>,
 }
 
 impl User {
@@ -112,13 +117,16 @@ impl User {
             .await
             .ok()?;
 
-        Some(User {
+        Some(Self {
             id: result.id,
             username: result.username,
             email: result.email,
             password: result.passwd,
             created_at: result.created_at.timestamp(),
             salt: result.salt,
+            bio: result.bio,
+            occupation: result.occupation,
+            avatar_path: result.avatar_path,
         })
     }
 
@@ -161,18 +169,36 @@ impl User {
             updated_at: result.updated_at.map(|updated| updated.timestamp()),
         })
     }
-}
 
-impl Clone for User {
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            username: self.username.clone(),
-            email: self.email.clone(),
-            password: self.password.clone(),
-            created_at: self.created_at,
-            salt: self.salt.clone(),
+    pub fn display_avatar_path(&self) -> String {
+        if let Some(ref avatar_path) = self.avatar_path {
+            avatar_path.clone()
+        } else {
+            "/static/images/default_avatar.png".to_owned()
         }
+    }
+
+    pub async fn edit_profile(
+        &mut self,
+        pool: &PgPool,
+        bio: &str,
+        occupation: &str,
+        avatar_path: Option<String>,
+    ) {
+        self.bio = bio.to_owned();
+        self.occupation = occupation.to_owned();
+        self.avatar_path = avatar_path.clone().map(|p| p.to_owned());
+
+        sqlx::query!(
+            "UPDATE users SET bio = $1, occupation = $2, avatar_path = $3 WHERE id = $4",
+            bio,
+            occupation,
+            avatar_path,
+            self.id
+        )
+        .execute(pool)
+        .await
+        .unwrap();
     }
 }
 
@@ -303,62 +329,4 @@ pub struct Comment {
     pub code_snippet: CodeSnippet,
     pub author_id: i32,
     pub content: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Profile {
-    pub user_id: i32,
-    pub bio: String,
-    pub occupation: String,
-    pub avatar_path: Option<String>,
-}
-
-impl Profile {
-    pub async fn create(pool: &PgPool, user_id: i32) {
-        sqlx::query!("INSERT INTO profiles VALUES ($1)", user_id)
-            .execute(pool)
-            .await
-            .unwrap();
-    }
-
-    pub async fn from_user_id(pool: &PgPool, user_id: i32) -> Option<Self> {
-        let result = sqlx::query!("SELECT * FROM profiles WHERE user_id = $1", user_id)
-            .fetch_one(pool)
-            .await
-            .ok()?;
-
-        Some(Self {
-            user_id: result.user_id,
-            bio: result.bio,
-            occupation: result.occupation,
-            avatar_path: result.avatar_path,
-        })
-    }
-
-    pub async fn edit(
-        pool: &PgPool,
-        user_id: i32,
-        bio: &str,
-        occupation: &str,
-        avatar_path: Option<String>,
-    ) {
-        sqlx::query!(
-            "UPDATE profiles SET bio = $1, occupation = $2, avatar_path = $3 WHERE user_id = $4",
-            bio,
-            occupation,
-            avatar_path,
-            user_id
-        )
-        .execute(pool)
-        .await
-        .unwrap();
-    }
-
-    pub fn display_avatar_path(&self) -> String {
-        if let Some(ref avatar_path) = self.avatar_path {
-            avatar_path.clone()
-        } else {
-            "/static/images/default_avatar.png".to_owned()
-        }
-    }
 }

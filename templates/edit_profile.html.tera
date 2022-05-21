@@ -7,18 +7,18 @@
 
 {% block main %}
     <div class="media pt-3 text-center">
-        <img class="rounded-circle profile-pic" src="{{ profile_image_url }}" alt="{{ user.username }}'s Profile Picture">
+        <img class="rounded-circle profile-pic" src="{{ avatar_image_url }}" alt="{{ user.username }}'s Profile Picture">
         <p class="display-2 mt-2">{{ user.username }}</p>
     </div>
 
     <form method="POST" enctype="multipart/form-data">
         <fieldset class="form-group">
             <div class="mb-3">
-                {{ m::input(label="Bio", type="text", name="bio", value=profile.bio) }}
+                {{ m::input(label="Bio", type="text", name="bio", value=user.bio) }}
             </div>
 
             <div class="mb-3">
-                {{ m::input(label="Occupation", type="text", name="occupation", value=profile.occupation) }}
+                {{ m::input(label="Occupation", type="text", name="occupation", value=user.occupation) }}
             </div>
 
             <div class="mb-3">

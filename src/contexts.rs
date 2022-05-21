@@ -41,8 +41,7 @@ pub struct SnippetDetailContext<'a, 'b> {
 pub struct ProfileContext {
     pub user: Option<models::User>,
     pub requested_user: models::User,
-    pub profile: models::Profile,
-    pub profile_image_url: String,
+    pub avatar_image_url: String,
     pub first_snippet: Option<models::CodeSnippet>,
     pub latest_snippet: Option<models::CodeSnippet>,
 }
@@ -50,8 +49,7 @@ pub struct ProfileContext {
 #[derive(Serialize)]
 pub struct EditProfileContext<'a, 'b> {
     pub user: models::User,
-    pub profile: models::Profile,
-    pub profile_image_url: String,
+    pub avatar_image_url: String,
     pub form: &'a Context<'b>,
     pub flash: Option<(String, String)>,
 }
