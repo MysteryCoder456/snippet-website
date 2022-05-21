@@ -195,7 +195,7 @@ impl<'r> FromRequest<'r> for User {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct CodeSnippet {
     pub id: i32,
     pub author: User,
@@ -275,6 +275,34 @@ impl CodeSnippet {
         .unwrap();
         record.id
     }
+
+    pub async fn get_comments(&self, pool: &PgPool) -> Vec<Comment> {
+        let results = sqlx::query!(
+            r#"SELECT * FROM comments WHERE code_snippet_id = $1"#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        results
+            .iter()
+            .map(|r| Comment {
+                id: r.id,
+                code_snippet: self.clone(),
+                author_id: r.author_id,
+                content: r.content.clone(),
+            })
+            .collect()
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Comment {
+    pub id: i32,
+    pub code_snippet: CodeSnippet,
+    pub author_id: i32,
+    pub content: String,
 }
 
 #[derive(Serialize, Deserialize)]
