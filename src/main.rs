@@ -100,14 +100,29 @@ async fn snippet_detail(
 ) -> Option<Template> {
     let pool = &db_state.pool;
     let snippet = models::CodeSnippet::from_id(pool, id).await?;
+    let comments = snippet.get_comments(pool).await;
     let flash_msg = flash.map(|f| f.into_inner());
+
+    let form_ctx = Context::default();
+    let form = if user.is_some() {
+        Some(&form_ctx)
+    } else {
+        None
+    };
 
     let ctx = contexts::SnippetDetailContext {
         user,
         snippet,
+        comments,
+        form,
         flash: flash_msg,
     };
     Some(Template::render("snippet_detail", &ctx))
+}
+
+#[post("/snippet/<id>")]
+async fn add_comment_api(id: i32, db_state: &State<DBState>) -> Result<Redirect, Template> {
+    todo!()
 }
 
 #[get("/snippet/<id>/run")]
@@ -452,6 +467,7 @@ async fn rocket() -> _ {
                 add_snippet_no_auth,
                 add_snippet_api,
                 snippet_detail,
+                add_comment_api,
                 snippet_run,
                 profile,
                 edit_profile,

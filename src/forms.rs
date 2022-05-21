@@ -42,3 +42,9 @@ pub struct EditProfileFrom<'a> {
 
     pub avatar: TempFile<'a>,
 }
+
+#[derive(FromForm)]
+pub struct AddCommentForm<'a> {
+    #[field(validate = len(..=500).or_else(msg!("Comment cannot be more than 500 character long")))]
+    pub content: &'a str,
+}

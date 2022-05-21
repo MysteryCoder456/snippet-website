@@ -29,9 +29,11 @@ pub struct AddSnippetContext<'a, 'b> {
 }
 
 #[derive(Serialize)]
-pub struct SnippetDetailContext {
+pub struct SnippetDetailContext<'a, 'b> {
     pub user: Option<models::User>,
     pub snippet: models::CodeSnippet,
+    pub comments: Vec<models::Comment>,
+    pub form: Option<&'a Context<'b>>,
     pub flash: Option<(String, String)>,
 }
 
