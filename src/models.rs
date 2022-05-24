@@ -5,7 +5,7 @@ use rocket::{
     request::{FromRequest, Outcome, Request},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{pool, PgPool};
+use sqlx::PgPool;
 
 fn generate_salt() -> String {
     rand::thread_rng()
@@ -314,7 +314,7 @@ impl CodeSnippet {
         let mut comments = vec![];
 
         for record in results {
-            if let Some(author) = User::from_id(pool, record.id).await {
+            if let Some(author) = User::from_id(pool, record.author_id).await {
                 comments.push(Comment {
                     id: record.id,
                     code_snippet: self.clone(),

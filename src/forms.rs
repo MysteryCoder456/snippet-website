@@ -45,6 +45,6 @@ pub struct EditProfileFrom<'a> {
 
 #[derive(FromForm)]
 pub struct AddCommentForm<'a> {
-    #[field(validate = len(..=500).or_else(msg!("Comment cannot be more than 500 character long")))]
+    #[field(validate = len(..=1000).or_else(msg!("Comment cannot be more than 1000 characters long")))]
     pub content: &'a str,
 }

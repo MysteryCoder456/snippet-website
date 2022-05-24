@@ -54,7 +54,6 @@ code {
 }
 
 .comment {
-    background: lightgray;
     border-radius: 17px;
     box-shadow: 0 0 10px 2px gray;
     display: flex;

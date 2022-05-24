@@ -8,43 +8,42 @@
 {% block main %}
     {{ m::snippet(s=snippet, link=false, top_border=false) }}
 
-    <button class="btn btn-outline-primary mb-2" id="run-btn" onclick="runCode()">Run Code</button>
+    <button class="btn btn-outline-success mb-2" id="run-btn" onclick="runCode()">Run Code</button>
     <pre style="display: none;" id="run-output"><code class="text-white language-plaintext mt-2"></code></pre>
 
-    <div class="comments">
-        {% for comment in comments %}
-            <div class="comment px-3 py-4 m-3">
-                <img class="rounded-circle profile-pic my-auto" src="{{ comment.author_avatar_url }}" alt="{{ comment.author.username }}'s Profile Picture">
-
-                <div class="ms-4">
-                    <h4 class="comment-author my-auto">
-                        By <a href="/profile/{{ comment.author.id }}">{{ comment.author.username }}</a>
-                    </h4>
-                    <p class="comment-content">{{ comment.content }}</p>
-                </div>
+    <form action="/snippet/{{ snippet.id }}" method="POST">
+        <fieldset class="form-group">
+            <div class="mb-3">
+                {{ m::input(label="New Comment", type="text", name="content", autofocus=false) }}
             </div>
-        {% endfor %}
-    </div>
+        </fieldset>
 
-    <script>
-        let btn = document.querySelector("#run-btn");
-        let output = document.querySelector("#run-output");
-        let output_inner = document.querySelector("#run-output code");
+        <div class="form-group mb-1">
+            <button class="btn btn-outline-primary" type="submit">
+                Post Comment
+            </button>
+        </div>
+    </form>
 
-        function runCode() {
-            output.style.display = "block";
-            output_inner.innerHTML = "Loading...";
-            
-            let xmlHttp = new XMLHttpRequest();
-            xmlHttp.onreadystatechange = function() { 
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                    output_inner.innerHTML = xmlHttp.responseText;
-                }
-            }
+    {% if comments %}
+        <div class="comments mt-4">
+            <h3>Comments</h3>
 
-            let url = "/snippet/{{ snippet.id }}/run";
-            xmlHttp.open("GET", url, true);
-            xmlHttp.send(null);
-        }
-    </script>
+            {% for comment in comments %}
+                <div class="comment px-3 py-4 mx-3 my-4">
+                    <img class="rounded-circle profile-pic my-auto" src="{{ comment.author_avatar_url }}" alt="{{ comment.author.username }}'s Profile Picture">
+
+                    <div class="ms-4">
+                        <h4 class="comment-author my-auto">
+                            By <a href="/profile/{{ comment.author.id }}">{{ comment.author.username }}</a>
+                        </h4>
+                        <p class="comment-content">{{ comment.content }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <script>let runUri = "/snippet/{{ snippet.id }}/run";</script>
+    <script type="text/javascript" src="/static/js/snippet_detail.js"></script>
 {% endblock main %}

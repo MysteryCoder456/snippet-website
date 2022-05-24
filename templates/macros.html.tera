@@ -38,12 +38,12 @@
     </div>
 {% endmacro snippet %}
 
-{% macro input(type, label, name, value="", required=true) %}
+{% macro input(type, label, name, value="", required=true, autofocus=true) %}
 
     <label for="id_{{ name | lower }}" class="form-label {% if required %} requiredField {% endif %}">
         {{ label }}
     </label>
-    <input type="{{ type }}" name="{{ name }}" autofocus class="textinput textInput form-control {% if name in form.errors %} is-invalid {% endif %}" id="id_{{ name | lower }}" value="{% if type != 'password' %} {{- self::value_for(name=name, default=value) -}} {% endif %}" {% if required %} required {% endif %}>
+    <input type="{{ type }}" name="{{ name }}" {% if autofocus %} autofocus {% endif %} class="textinput textInput form-control {% if name in form.errors %} is-invalid {% endif %}" id="id_{{ name | lower }}" value="{% if type != 'password' %} {{- self::value_for(name=name, default=value) -}} {% endif %}" {% if required %} required {% endif %}>
 
     {% if name in form.errors %}
         {{ self::errors_for(name=name) }}

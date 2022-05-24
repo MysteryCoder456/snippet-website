@@ -133,6 +133,7 @@ async fn add_comment_api(
         Some(ref new_comment) => {
             let new_comment_id =
                 models::Comment::create(pool, snippet_id, user.id, new_comment.content).await;
+            // TODO - Focus on new comment when created
             Some(Ok(Redirect::to(uri!(snippet_detail(id = snippet_id)))))
         }
         None => {
