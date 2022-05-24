@@ -120,9 +120,35 @@ async fn snippet_detail(
     Some(Template::render("snippet_detail", &ctx))
 }
 
-#[post("/snippet/<id>")]
-async fn add_comment_api(id: i32, db_state: &State<DBState>) -> Result<Redirect, Template> {
-    todo!()
+#[post("/snippet/<snippet_id>", data = "<form>")]
+async fn add_comment_api(
+    snippet_id: i32,
+    user: models::User,
+    db_state: &State<DBState>,
+    form: Form<Contextual<'_, forms::AddCommentForm<'_>>>,
+) -> Option<Result<Redirect, Template>> {
+    let pool = &db_state.pool;
+
+    match form.value {
+        Some(ref new_comment) => {
+            let new_comment_id =
+                models::Comment::create(pool, snippet_id, user.id, new_comment.content).await;
+            Some(Ok(Redirect::to(uri!(snippet_detail(id = snippet_id)))))
+        }
+        None => {
+            let snippet = models::CodeSnippet::from_id(pool, snippet_id).await?;
+            let comments = snippet.get_comments(pool).await;
+
+            let ctx = contexts::SnippetDetailContext {
+                user: Some(user),
+                snippet,
+                comments,
+                form: Some(&form.context),
+                flash: None,
+            };
+            Some(Err(Template::render("snippet_detail", &ctx)))
+        }
+    }
 }
 
 #[get("/snippet/<id>/run")]

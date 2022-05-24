@@ -5,7 +5,7 @@ use rocket::{
     request::{FromRequest, Outcome, Request},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{pool, PgPool};
 
 fn generate_salt() -> String {
     rand::thread_rng()
@@ -285,7 +285,7 @@ impl CodeSnippet {
         language: &str,
         code: &str,
     ) -> i32 {
-        let record = sqlx::query!(
+        sqlx::query!(
             r#"
             INSERT INTO code_snippets (author_id, title, lang, code)
             VALUES ($1, $2, $3, $4)
@@ -298,8 +298,8 @@ impl CodeSnippet {
         )
         .fetch_one(pool)
         .await
-        .unwrap();
-        record.id
+        .unwrap()
+        .id
     }
 
     pub async fn get_comments(&self, pool: &PgPool) -> Vec<Comment> {
@@ -336,4 +336,23 @@ pub struct Comment {
     pub author: User,
     pub author_avatar_url: String,
     pub content: String,
+}
+
+impl Comment {
+    pub async fn create(pool: &PgPool, snippet_id: i32, author_id: i32, content: &str) -> i32 {
+        sqlx::query!(
+            r#"
+            INSERT INTO comments (code_snippet_id, author_id, content)
+            VALUES ($1, $2, $3)
+            RETURNING id
+            "#,
+            snippet_id,
+            author_id,
+            content
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap()
+        .id
+    }
 }
