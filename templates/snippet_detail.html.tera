@@ -11,19 +11,24 @@
     <button class="btn btn-outline-success mb-2" id="run-btn" onclick="runCode()">Run Code</button>
     <pre style="display: none;" id="run-output"><code class="text-white language-plaintext mt-2"></code></pre>
 
-    <form action="/snippet/{{ snippet.id }}" method="POST">
-        <fieldset class="form-group">
-            <div class="mb-3">
-                {{ m::input(label="New Comment", type="text", name="content", autofocus=false) }}
-            </div>
-        </fieldset>
+    {% if form %}
+        <form action="/snippet/{{ snippet.id }}" method="POST">
+            <fieldset class="form-group">
+                <div class="mb-3">
+                    {{ m::input(label="New Comment", type="text", name="content", autofocus=false) }}
+                </div>
+            </fieldset>
 
-        <div class="form-group mb-1">
-            <button class="btn btn-outline-primary" type="submit">
-                Post Comment
-            </button>
-        </div>
-    </form>
+            <div class="form-group mb-1">
+                <button class="btn btn-outline-primary" type="submit">
+                    Post Comment
+                </button>
+            </div>
+        </form>
+    {% else %}
+        <br>
+        <small class="muted">Login to post comments</small>
+    {% endif %}
 
     {% if comments %}
         <div class="comments mt-4">
