@@ -1,0 +1,22 @@
+[package]
+name = "snippet-website"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+rocket = { version = "0.5.0-rc.1", features = ["secrets", "tls"] }
+rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["tera"] }
+sqlx = { version = "^0.5", features = [
+    "runtime-tokio-native-tls",
+    "postgres",
+    "chrono"
+] }
+tokio = { version = "^1.18", features = ["fs"] }
+serde = { version = "^1.0", features = ["derive"] }
+piston_rs = "^0.4"
+indexmap = "^1.8"
+uuid = { version = "^1.0", features = ["v4", "fast-rng"] }
+rand = "^0.8"
+sha256 = "^1.0"
+dotenv = "^0.15"
