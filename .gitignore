@@ -1,6 +1,5 @@
 /target
 site_media/
 private/
-Rocket.toml
 .DS_Store
 .env
