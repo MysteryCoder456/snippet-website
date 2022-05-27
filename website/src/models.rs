@@ -356,3 +356,12 @@ impl Comment {
         .id
     }
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Message {
+    pub id: i32,
+    pub sender: User,
+    pub receiver: User,
+    pub content: String,
+    pub sent_at: i64,
+}
