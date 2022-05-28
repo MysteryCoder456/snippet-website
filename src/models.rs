@@ -361,7 +361,14 @@ impl Comment {
 pub struct Message {
     pub id: i32,
     pub sender: User,
-    pub receiver: User,
+    pub channel: Channel,
     pub content: String,
     pub sent_at: i64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Channel {
+    pub id: i32,
+    pub name: Option<String>,
+    pub members: Vec<User>,
 }
