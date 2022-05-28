@@ -200,6 +200,27 @@ impl User {
         .await
         .unwrap();
     }
+
+    pub async fn get_channels(&self, pool: &PgPool) -> Vec<Channel> {
+        sqlx::query!(
+            r#"
+            SELECT * FROM channels
+            WHERE channels.id IN (
+                SELECT channel_id FROM channels_users
+                WHERE user_id = $1
+            )"#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| Channel {
+            id: r.id,
+            name: r.name.clone(),
+        })
+        .collect()
+    }
 }
 
 #[rocket::async_trait]
@@ -370,5 +391,4 @@ pub struct Message {
 pub struct Channel {
     pub id: i32,
     pub name: Option<String>,
-    pub members: Vec<User>,
 }

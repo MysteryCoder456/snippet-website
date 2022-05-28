@@ -171,6 +171,24 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
     Some(result)
 }
 
+#[get("/msg")]
+async fn channels_list(
+    db_state: &State<DBState>,
+    user: models::User,
+    flash: Option<FlashMessage<'_>>,
+) -> Template {
+    // TODO
+    todo!()
+}
+
+#[get("/msg", rank = 2)]
+fn channels_list_no_auth() -> Flash<Redirect> {
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to access your chats",
+    )
+}
+
 #[get("/profile/<user_id>")]
 async fn profile(
     user_id: i32,
@@ -480,6 +498,8 @@ async fn rocket() -> _ {
                 snippet_detail,
                 add_comment_api,
                 snippet_run,
+                channels_list,
+                channels_list_no_auth,
                 profile,
                 edit_profile,
                 edit_profile_no_auth,
