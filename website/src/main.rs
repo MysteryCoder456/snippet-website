@@ -258,13 +258,9 @@ async fn edit_profile_api(
                             }
                         }
 
-                        let new_avatar_fs_path = format!(
-                            "website/{}",
-                            new_avatar_path.as_ref().unwrap().replacen('/', "", 1)
-                        );
                         new_profile
                             .avatar
-                            .persist_to(new_avatar_fs_path)
+                            .persist_to(new_avatar_path.as_ref().unwrap().replacen('/', "", 1))
                             .await
                             .unwrap();
                     } else {
@@ -454,7 +450,7 @@ async fn rocket() -> _ {
     dotenv::dotenv().ok();
 
     // Ensure all the required directories are present
-    let required_dirs = ["website/site_media/profile_avatars"];
+    let required_dirs = ["site_media/profile_avatars"];
     for dir in required_dirs {
         if !std::path::Path::new(dir).exists() {
             match tokio::fs::create_dir_all(dir).await {
@@ -495,6 +491,6 @@ async fn rocket() -> _ {
                 logout,
             ],
         )
-        .mount("/static", FileServer::from("website/static"))
-        .mount("/site_media", FileServer::from("website/site_media"))
+        .mount("/static", FileServer::from("static"))
+        .mount("/site_media", FileServer::from("site_media"))
 }
