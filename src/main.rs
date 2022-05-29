@@ -535,7 +535,7 @@ async fn rocket() -> _ {
         if !std::path::Path::new(dir).exists() {
             match tokio::fs::create_dir_all(dir).await {
                 Ok(_) => println!("Created {} directory", dir),
-                Err(e) => println!("Unable to create directory {}:\n{}", dir, e),
+                Err(e) => eprintln!("Unable to create directory {}:\n{}", dir, e),
             }
         }
     }
