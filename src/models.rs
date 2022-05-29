@@ -1,5 +1,6 @@
 use rand::{distributions::Alphanumeric, Rng};
 use rocket::{
+    futures::future::join_all,
     http::Cookie,
     outcome::IntoOutcome,
     request::{FromRequest, Outcome, Request},
@@ -26,7 +27,7 @@ fn generate_hash(password: &str, salt: &str) -> String {
     hash
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct User {
     pub id: i32,
     pub username: String,
@@ -221,7 +222,7 @@ impl User {
     }
 
     pub async fn get_channels(&self, pool: &PgPool) -> Vec<Channel> {
-        sqlx::query!(
+        let records = sqlx::query!(
             r#"
             SELECT * FROM channels
             WHERE channels.id IN (
@@ -232,13 +233,37 @@ impl User {
         )
         .fetch_all(pool)
         .await
-        .unwrap()
-        .iter()
-        .map(|r| Channel {
-            id: r.id,
-            name: r.name.clone(),
-        })
-        .collect()
+        .unwrap();
+
+        let mut channels = vec![];
+
+        for record in records {
+            let member_id_records = sqlx::query!(
+                r#"SELECT user_id FROM channels_users WHERE channel_id = $1"#,
+                record.id
+            )
+            .fetch_all(pool)
+            .await
+            .unwrap();
+
+            let member_fetch_futures = member_id_records
+                .iter()
+                .map(|r| User::from_id(pool, r.user_id));
+
+            let members = join_all(member_fetch_futures)
+                .await
+                .iter()
+                .filter_map(|u: &Option<_>| u.to_owned())
+                .collect::<Vec<_>>();
+
+            channels.push(Channel {
+                id: record.id,
+                name: record.name.clone(),
+                members,
+            });
+        }
+
+        channels
     }
 }
 
@@ -410,6 +435,7 @@ pub struct Message {
 pub struct Channel {
     pub id: i32,
     pub name: String,
+    pub members: Vec<User>,
 }
 
 impl Channel {
