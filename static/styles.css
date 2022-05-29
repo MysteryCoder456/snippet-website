@@ -35,6 +35,10 @@ code {
     color: darkgrey;
 }
 
+.nav-link:focus {
+    color: darkgrey;
+}
+
 .code-snippet .display-5 {
     color: #21252A;
 }
