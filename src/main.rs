@@ -32,12 +32,11 @@ async fn index(
 ) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
-    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::IndexContext {
         user,
         code_snippets: snippets,
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("home", ctx)
 }
@@ -101,7 +100,6 @@ async fn snippet_detail(
     let pool = &db_state.pool;
     let snippet = models::CodeSnippet::from_id(pool, id).await?;
     let comments = snippet.get_comments(pool).await;
-    let flash_msg = flash.map(|f| f.into_inner());
 
     let form_ctx = Context::default();
     let form = if user.is_some() {
@@ -115,7 +113,7 @@ async fn snippet_detail(
         snippet,
         comments,
         form,
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Some(Template::render("snippet_detail", &ctx))
 }
@@ -131,7 +129,7 @@ async fn add_comment_api(
 
     match form.value {
         Some(ref new_comment) => {
-            let new_comment_id =
+            let _new_comment_id =
                 models::Comment::create(pool, snippet_id, user.id, new_comment.content).await;
             // TODO - Focus on new comment when created
             Some(Ok(Redirect::to(uri!(snippet_detail(id = snippet_id)))))
@@ -179,12 +177,11 @@ async fn channels_list(
 ) -> Template {
     let pool = &db_state.pool;
     let channels = user.get_channels(pool).await;
-    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::ChannelsListContext {
         user,
         channels,
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("channels_list", &ctx)
 }
@@ -195,6 +192,65 @@ fn channels_list_no_auth() -> Flash<Redirect> {
         Redirect::to(uri!(login)),
         "You must login to access your channels",
     )
+}
+
+#[get("/msg/new")]
+fn add_channel(user: models::User, flash: Option<FlashMessage<'_>>) -> Template {
+    let ctx = contexts::AddChannelContext {
+        user,
+        form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
+    };
+    Template::render("add_channel", &ctx)
+}
+
+#[get("/msg/new", rank = 2)]
+fn add_channel_no_auth() -> Flash<Redirect> {
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to create new channels",
+    )
+}
+
+#[post("/msg/new", data = "<form>")]
+async fn add_channel_api(
+    db_state: &State<DBState>,
+    user: models::User,
+    form: Form<Contextual<'_, forms::NewChannelForm<'_>>>,
+) -> Result<Flash<Redirect>, Template> {
+    match form.value {
+        Some(ref new_channel) => {
+            let pool = &db_state.pool;
+            let mut initial_member_ids = vec![user.id];
+
+            if let Some(initial_members_split) = new_channel.initial_members.map(|m| m.split(",")) {
+                for username in initial_members_split {
+                    if let Some(u) = models::User::from_username(pool, username.trim()).await {
+                        // Prevent duplication of current user
+                        if user.id != u.id {
+                            initial_member_ids.push(u.id);
+                        }
+                    }
+                }
+            }
+
+            // TODO: redirect to channel specific page and remove flash message
+            let _new_channel_id =
+                models::Channel::create(pool, new_channel.name, initial_member_ids).await;
+            Ok(Flash::success(
+                Redirect::to(uri!(channels_list)),
+                "Successfully created new channel!",
+            ))
+        }
+        None => {
+            let ctx = contexts::AddChannelContext {
+                user,
+                form: &form.context,
+                flash: None,
+            };
+            Err(Template::render("add_channel", &ctx))
+        }
+    }
 }
 
 #[get("/profile/<user_id>")]
@@ -400,11 +456,9 @@ async fn register_api(
 
 #[get("/login")]
 fn login(flash: Option<FlashMessage<'_>>) -> Template {
-    let flash_msg = flash.map(|f| f.into_inner());
-
     let ctx = contexts::LoginContext {
         form: &Context::default(),
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("login", &ctx)
 }
@@ -508,6 +562,9 @@ async fn rocket() -> _ {
                 snippet_run,
                 channels_list,
                 channels_list_no_auth,
+                add_channel,
+                add_channel_no_auth,
+                add_channel_api,
                 profile,
                 edit_profile,
                 edit_profile_no_auth,

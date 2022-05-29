@@ -48,3 +48,11 @@ pub struct AddCommentForm<'a> {
     #[field(validate = len(..=1000).or_else(msg!("Comment cannot be more than 1000 characters long")))]
     pub content: &'a str,
 }
+
+#[derive(FromForm)]
+pub struct NewChannelForm<'a> {
+    #[field(validate = len(..=50).or_else(msg!("Name cannot be more than 50 characters long")))]
+    pub name: &'a str,
+
+    pub initial_members: Option<&'a str>,
+}

@@ -130,6 +130,25 @@ impl User {
         })
     }
 
+    pub async fn from_username(pool: &PgPool, username: &str) -> Option<Self> {
+        let result = sqlx::query!("SELECT * FROM users WHERE username = $1", username)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+
+        Some(Self {
+            id: result.id,
+            username: result.username,
+            email: result.email,
+            password: result.passwd,
+            created_at: result.created_at.timestamp(),
+            salt: result.salt,
+            bio: result.bio,
+            occupation: result.occupation,
+            avatar_path: result.avatar_path,
+        })
+    }
+
     pub async fn get_oldest_snippet(&self, pool: &PgPool) -> Option<CodeSnippet> {
         let result = sqlx::query!(
             "SELECT * FROM code_snippets WHERE author_id = $1 ORDER BY created_at ASC",
@@ -391,4 +410,30 @@ pub struct Message {
 pub struct Channel {
     pub id: i32,
     pub name: String,
+}
+
+impl Channel {
+    pub async fn create(pool: &PgPool, name: &str, initial_member_ids: Vec<i32>) -> i32 {
+        // Create new channel
+        let record = sqlx::query!(
+            r#"INSERT INTO channels (name) VALUES ($1) RETURNING id"#,
+            name
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+
+        // Add users to channel
+        for user_id in initial_member_ids {
+            let _ = sqlx::query!(
+                r#"INSERT INTO channels_users VALUES ($1, $2)"#,
+                record.id,
+                user_id
+            )
+            .execute(pool)
+            .await;
+        }
+
+        record.id
+    }
 }

@@ -5,11 +5,9 @@
 {% endblock title %}
 
 {% block main %}
-    <!-- TODO: Add channel creation functionality -->
-
     <div class="border-bottom row">
       <h3 class="inline col">Your Channels</h3>
-      <a href="#" class="inline col-1">
+      <a href="/msg/new" class="inline col-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="32" class="p-2 glyph-btn">
           <!--! Font Awesome Pro 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->
           <path d="M432 256c0 17.69-14.33 32.01-32 32.01H256v144c0 17.69-14.33 31.99-32 31.99s-32-14.3-32-31.99v-144H48c-17.67 0-32-14.32-32-32.01s14.33-31.99 32-31.99H192v-144c0-17.69 14.33-32.01 32-32.01s32 14.32 32 32.01v144h144C417.7 224 432 238.3 432 256z"/>
@@ -17,8 +15,10 @@
       </a>
     </div>
 
-    {% if channels | length != 0 %}
+    {% if channels %}
       <div class="channels">
+        <!-- TODO: Improve this -->
+
         {% for channel in channels %}
           <div class="channel">
             {{ channel.name }}
@@ -28,7 +28,7 @@
     {% else %}
       <small class="text-muted">
         Looks like you haven't joined any channels.
-        <a href="#">Make a new one?</a>
+        <a href="/msg/new">Make a new one?</a>
       </small>
     {% endif %}
 {% endblock main %}

@@ -60,3 +60,10 @@ pub struct ChannelsListContext {
     pub channels: Vec<models::Channel>,
     pub flash: Option<(String, String)>,
 }
+
+#[derive(Serialize)]
+pub struct AddChannelContext<'a, 'b> {
+    pub user: models::User,
+    pub form: &'a Context<'b>,
+    pub flash: Option<(String, String)>,
+}
