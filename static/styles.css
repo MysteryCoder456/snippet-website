@@ -61,7 +61,7 @@ code {
 
 .comment .profile-pic {
     width: 6%;
-    aspect-ration: 1;
+    aspect-ratio: 1;
     box-shadow: 0 0 4px 2px gray;
 }
 
