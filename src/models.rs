@@ -390,5 +390,5 @@ pub struct Message {
 #[derive(Serialize, Deserialize)]
 pub struct Channel {
     pub id: i32,
-    pub name: Option<String>,
+    pub name: String,
 }

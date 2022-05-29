@@ -177,15 +177,23 @@ async fn channels_list(
     user: models::User,
     flash: Option<FlashMessage<'_>>,
 ) -> Template {
-    // TODO
-    todo!()
+    let pool = &db_state.pool;
+    let channels = user.get_channels(pool).await;
+    let flash_msg = flash.map(|f| f.into_inner());
+
+    let ctx = contexts::ChannelsListContext {
+        user,
+        channels,
+        flash: flash_msg,
+    };
+    Template::render("channels_list", &ctx)
 }
 
 #[get("/msg", rank = 2)]
 fn channels_list_no_auth() -> Flash<Redirect> {
     Flash::warning(
         Redirect::to(uri!(login)),
-        "You must login to access your chats",
+        "You must login to access your channels",
     )
 }
 

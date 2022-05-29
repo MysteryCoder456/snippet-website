@@ -64,3 +64,16 @@ code {
     aspect-ration: 1;
     box-shadow: 0 0 4px 2px gray;
 }
+
+.inline {
+    display: inline;
+}
+
+.glyph-btn {
+    border-radius: 10px;
+    background: whitesmoke;
+}
+
+.glyph-btn:hover {
+    background: lightgray;
+}
