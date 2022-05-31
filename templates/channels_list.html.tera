@@ -21,7 +21,11 @@
       <div class="channels">
         {% for channel in channels %}
           <div class="channel py-2 border-bottom">
-            <h2>{{ channel.name }}</h2>
+            <h2>
+              <a href="/msg/{{ channel.id }}" class="hover-underline">
+                {{ channel.name }}
+              </a>
+            </h2>
             <small>
               <b>Members:</b>
               {% for user in channel.members %}

@@ -237,6 +237,7 @@ impl User {
 
         let mut channels = vec![];
 
+        // TODO: Perhaps use Channel::from_id function instead of this loop
         for record in records {
             let member_id_records = sqlx::query!(
                 r#"SELECT user_id FROM channels_users WHERE channel_id = $1"#,
@@ -431,7 +432,7 @@ pub struct Message {
     pub sent_at: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Channel {
     pub id: i32,
     pub name: String,
@@ -461,5 +462,82 @@ impl Channel {
         }
 
         record.id
+    }
+
+    pub async fn from_id(pool: &PgPool, channel_id: i32) -> Option<Self> {
+        let record = sqlx::query!(
+            r#"
+            SELECT * FROM channels
+            WHERE id = $1
+            "#,
+            channel_id
+        )
+        .fetch_one(pool)
+        .await
+        .ok()?;
+
+        let member_id_records = sqlx::query!(
+            r#"SELECT user_id FROM channels_users WHERE channel_id = $1"#,
+            channel_id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        let member_fetch_futures = member_id_records
+            .iter()
+            .map(|r| User::from_id(pool, r.user_id));
+
+        let members = join_all(member_fetch_futures)
+            .await
+            .iter()
+            .filter_map(|u: &Option<_>| u.to_owned())
+            .collect::<Vec<_>>();
+
+        Some(Channel {
+            id: record.id,
+            name: record.name.clone(),
+            members,
+        })
+    }
+
+    pub async fn get_all_messages(&self, pool: &PgPool) -> Vec<Message> {
+        sqlx::query!(
+            r#"
+            SELECT
+                messages.id, messages.sender_id, messages.content, messages.sent_at,
+                users.username, users.email, users.created_at, users.bio, users.occupation, users.avatar_path
+            FROM messages
+            INNER JOIN users ON messages.sender_id = users.id
+            WHERE messages.channel_id = $1
+            ORDER BY sent_at ASC
+            "#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| {
+            let sender = User {
+                id: r.sender_id,
+                username: r.username.clone(),
+                email: r.email.clone(),
+                created_at: r.created_at.timestamp(),
+                bio: r.bio.clone(),
+                occupation: r.occupation.clone(),
+                avatar_path: r.avatar_path.clone(),
+                ..Default::default()
+            };
+
+            Message {
+                id: r.id,
+                sender,
+                channel: self.clone(),
+                content: r.content.clone(),
+                sent_at: r.sent_at.timestamp(),
+            }
+        })
+        .collect()
     }
 }

@@ -67,3 +67,12 @@ pub struct AddChannelContext<'a, 'b> {
     pub form: &'a Context<'b>,
     pub flash: Option<(String, String)>,
 }
+
+#[derive(Serialize)]
+pub struct ChannelMessagesContext<'a, 'b> {
+    pub user: models::User,
+    pub channel: models::Channel,
+    pub messages: Vec<models::Message>,
+    pub form: &'a Context<'b>,
+    pub flash: Option<(String, String)>,
+}

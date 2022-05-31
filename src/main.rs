@@ -234,11 +234,10 @@ async fn add_channel_api(
                 }
             }
 
-            // TODO: redirect to channel specific page and remove flash message
-            let _new_channel_id =
+            let new_channel_id =
                 models::Channel::create(pool, new_channel.name, initial_member_ids).await;
             Ok(Flash::success(
-                Redirect::to(uri!(channels_list)),
+                Redirect::to(uri!(channel_messages(channel_id = new_channel_id))),
                 "Successfully created new channel!",
             ))
         }
@@ -251,6 +250,27 @@ async fn add_channel_api(
             Err(Template::render("add_channel", &ctx))
         }
     }
+}
+
+#[get("/msg/<channel_id>")]
+async fn channel_messages(
+    channel_id: i32,
+    db_state: &State<DBState>,
+    user: models::User,
+    flash: Option<FlashMessage<'_>>,
+) -> Option<Template> {
+    let pool = &db_state.pool;
+    let channel = models::Channel::from_id(pool, channel_id).await?;
+    let messages = channel.get_all_messages(pool).await;
+
+    let ctx = contexts::ChannelMessagesContext {
+        user,
+        channel,
+        messages,
+        form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
+    };
+    Some(Template::render("channel_messages", &ctx))
 }
 
 #[get("/profile/<user_id>")]
@@ -562,6 +582,7 @@ async fn rocket() -> _ {
                 snippet_run,
                 channels_list,
                 channels_list_no_auth,
+                channel_messages,
                 add_channel,
                 add_channel_no_auth,
                 add_channel_api,

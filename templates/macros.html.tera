@@ -40,9 +40,11 @@
 
 {% macro input(type, label, name, value="", required=true, autofocus=true, placeholder="") %}
 
-    <label for="id_{{ name | lower }}" class="form-label {% if required %} requiredField {% endif %}">
-        {{ label }}
-    </label>
+    {% if label %}
+        <label for="id_{{ name | lower }}" class="form-label {% if required %} requiredField {% endif %}">
+            {{ label }}
+        </label>
+    {% endif %}
 
     {% if not required %}
         <small class="text-muted">(Optional)</small>

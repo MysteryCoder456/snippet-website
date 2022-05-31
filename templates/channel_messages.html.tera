@@ -1,0 +1,31 @@
+{% import "macros" as m %}
+{% extends "base_template" %}
+
+{% block title %}
+    {{ channel.name }}
+{% endblock title %}
+
+{% block main %}
+    <div class="mb-2 border-bottom">
+      <h3>{{ channel.name }}</h3>
+    </div>
+
+    <div>
+      {% for msg in messages %}
+        <span>
+          <b>{{ msg.sender.username }}: </b>
+          {{ msg.content }}
+        </span>
+      {% endfor %}
+    </div>
+
+    <form action="/msg/{{ channel.id }}/send" method="POST" class="row me-1 mt-3">
+        <div class="col">
+            {{ m::input(label="", type="text", name="content") }}
+        </div>
+
+        <button class="btn btn-outline-primary col-1" type="submit">
+            Send
+        </button>
+    </form>
+{% endblock main %}
