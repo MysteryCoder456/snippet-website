@@ -19,7 +19,7 @@
 {% endmacro errors_for %}
 
 {% macro snippet(s, link=true, top_border=true) %}
-    <div class="code-snippet {% if top_border %} pt-3 border-top {% endif %}">
+    <div class="code-snippet {% if top_border %} pt-2 border-top {% endif %}">
         {% if link %}
             <a href="/snippet/{{ s.id }}" class="display-5 hover-underline">{{ s.title }}</a>
         {% else %}
