@@ -16,6 +16,10 @@
           <b>{{ msg.sender.username }}: </b>
           {{ msg.content }}
         </span>
+
+        {% if not loop.last %}
+          <br>
+        {% endif %}
       {% endfor %}
     </div>
 
