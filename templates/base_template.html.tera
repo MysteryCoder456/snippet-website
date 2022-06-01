@@ -35,6 +35,10 @@
                         <a href="/" class="nav-link">Home</a>
                         <a href="/new" class="nav-link">Add Snippet</a>
                         <a href="/msg" class="nav-link">Channels</a>
+
+                        <a href="https://github.com/MysteryCoder456/snippet-website" target="_blank" class="nav-link">
+                            Github
+                        </a>
                     </div>
 
                     <div class="navbar-nav ms-auto">
