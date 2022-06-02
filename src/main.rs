@@ -7,11 +7,20 @@ use rocket::{
     fs::FileServer,
     http::{Cookie, CookieJar},
     request::FlashMessage,
-    response::{Flash, Redirect},
-    routes, State,
+    response::{
+        stream::{Event, EventStream},
+        Flash, Redirect,
+    },
+    routes,
+    serde::json::{json, Value},
+    Shutdown, State,
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use tokio::{
+    select,
+    sync::broadcast::{channel, error::RecvError, Sender},
+};
 use uuid::Uuid;
 
 mod contexts;
@@ -271,6 +280,91 @@ async fn channel_messages(
         flash: flash.map(|f| f.into_inner()),
     };
     Some(Template::render("channel_messages", &ctx))
+}
+
+#[post("/msg/<channel_id>/send", data = "<form>")]
+async fn message_send_api(
+    channel_id: i32,
+    db_state: &State<DBState>,
+    user: models::User,
+    form: Form<Contextual<'_, forms::MessageSendForm<'_>>>,
+) -> Value {
+    match form.value {
+        Some(ref new_message) => {
+            let pool = &db_state.pool;
+            let channel = models::Channel::from_id(pool, channel_id).await;
+
+            if !channel.is_some() {
+                return json!({
+                    "status": 404,
+                    "message": "Channel not found!",
+                });
+            }
+
+            let channel = channel.unwrap();
+
+            if channel.members.contains(&user) {
+                let new_msg_id =
+                    models::Message::create(pool, channel.id, user.id, new_message.content).await;
+
+                json!({
+                    "status": 200,
+                    "message": "Successfully sent message",
+                    "message_id": new_msg_id,
+                    "channel_id": channel.id,
+                })
+            } else {
+                json!({
+                    "status": 403,
+                    "message": "User is not in channel",
+                })
+            }
+        }
+        None => json!({
+            "status": 400,
+            "message": "Please provide a 'content' field",
+        }),
+    }
+}
+
+#[get("/msg/<channel_id>/events")]
+async fn message_events(
+    channel_id: i32,
+    user: models::User,
+    db_state: &State<DBState>,
+    queue: &State<Sender<models::Message>>,
+    mut end: Shutdown,
+) -> Option<EventStream![]> {
+    let pool = &db_state.pool;
+    let channel = models::Channel::from_id(pool, channel_id).await?;
+
+    // Don't initiate event stream if user is not a member
+    if !channel.members.contains(&user) {
+        return None;
+    }
+
+    let mut rx = queue.subscribe();
+
+    Some(EventStream! {
+        loop {
+            let msg = select! {
+                msg = rx.recv() => match msg {
+                    Ok(msg) => {
+                        if msg.channel.id == channel.id {
+                            msg
+                        } else {
+                            continue
+                        }
+                    },
+                    Err(RecvError::Closed) => break,
+                    Err(RecvError::Lagged(_)) => continue,
+                },
+                _ = &mut end => break,
+            };
+
+            yield Event::json(&msg);
+        }
+    })
 }
 
 #[get("/profile/<user_id>")]
@@ -570,6 +664,7 @@ async fn rocket() -> _ {
     rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
+        .manage(channel::<models::Message>(1024).0)
         .mount(
             "/",
             routes![
@@ -583,6 +678,8 @@ async fn rocket() -> _ {
                 channels_list,
                 channels_list_no_auth,
                 channel_messages,
+                message_send_api,
+                message_events,
                 add_channel,
                 add_channel_no_auth,
                 add_channel_api,

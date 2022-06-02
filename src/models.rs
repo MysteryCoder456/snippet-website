@@ -268,6 +268,12 @@ impl User {
     }
 }
 
+impl PartialEq for User {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
     type Error = &'r str;
@@ -423,13 +429,32 @@ impl Comment {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Message {
     pub id: i32,
     pub sender: User,
     pub channel: Channel,
     pub content: String,
     pub sent_at: i64,
+}
+
+impl Message {
+    pub async fn create(pool: &PgPool, channel_id: i32, sender_id: i32, content: &str) -> i32 {
+        sqlx::query!(
+            r#"
+            INSERT INTO messages (channel_id, sender_id, content)
+            VALUES ($1, $2, $3)
+            RETURNING id
+            "#,
+            channel_id,
+            sender_id,
+            content
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap()
+        .id
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

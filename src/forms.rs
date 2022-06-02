@@ -56,3 +56,9 @@ pub struct NewChannelForm<'a> {
 
     pub initial_members: Option<&'a str>,
 }
+
+#[derive(FromForm)]
+pub struct MessageSendForm<'a> {
+    #[field(validate = len(..=1000).or_else(msg!("Message cannot be more than 1000 characters long")))]
+    pub content: &'a str,
+}
