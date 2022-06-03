@@ -1,0 +1,36 @@
+{% import "macros" as m %}
+{% extends "base_template" %}
+
+{% block title %}
+    Create Channel
+{% endblock title %}
+
+{% block main %}
+    <h3 class="pb-3 border-bottom">Create a New Channel</h3>
+
+    <form action="/msg/new" method="POST">
+        <fieldset class="form-group">
+            <div class="mb-3">
+                {{ m::input(label="Channel Name", type="text", name="name") }}
+            </div>
+
+            <div class="mb-3">
+                {{ m::input(label="Add Other People", type="text", name="initial_members", required=false, placeholder="List of usernames separated by commas (,)") }}
+            </div>
+        </fieldset>
+
+        <div class="form-group">
+            <button class="btn btn-outline-primary" type="submit">
+                Create
+            </button>
+        </div>
+    </form>
+
+    <script>
+      let input = document.querySelector("#id_name");
+      
+      if (input.value == "") {
+          input.value = "{{ user.username }}'s Channel";
+      }
+    </script>
+{% endblock main %}

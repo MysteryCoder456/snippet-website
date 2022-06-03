@@ -1,0 +1,82 @@
+{% import "macros" as m %}
+{% extends "base_template" %}
+
+{% block title %}
+    {{ channel.name }}
+{% endblock title %}
+
+{% block main %}
+    <span id="msg-template" class="message">
+      <b><span class="msg-author">Author</span>: </b>
+      <span class="msg-content">Message Content</span>
+    </span>
+
+    <div class="mb-2 border-bottom">
+      <h3>{{ channel.name }}</h3>
+    </div>
+
+    <div class="messages">
+      {% for msg in messages %}
+        <span id="msg-{{ msg.id }}" class="message">
+          <b><span class="msg-author">{{ msg.sender.username }}</span>: </b>
+          <span class="msg-content">{{ msg.content }}</span>
+        </span>
+
+        {% if not loop.last %}
+          <br>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <form action="/msg/{{ channel.id }}/send" method="POST" class="row me-1 mt-3" id="msg-send-form">
+        <div class="col">
+            {{ m::input(label="", type="text", name="content", placeholder="Message") }}
+        </div>
+
+        <button class="btn btn-outline-primary col-1" type="submit">
+            Send
+        </button>
+    </form>
+
+    <script>
+      const msgTemplate = document.querySelector("#msg-template");
+      const messages = document.querySelector(".messages");
+
+      const msgSendForm = document.querySelector("#msg-send-form");
+      const contentField = msgSendForm.querySelector("input[name='content']");
+
+      function addMessage(msg) {
+          let newMsg = msgTemplate.cloneNode(true);
+
+          newMsg.id = "msg-" + msg.id;
+          newMsg.querySelector(".msg-author").textContent = msg.sender.username;
+          newMsg.querySelector(".msg-content").textContent = msg.content;
+
+          messages.appendChild(document.createElement("br"));
+          messages.appendChild(newMsg);
+      }
+
+      msgSendForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        let content = contentField.value;
+
+        if (content.length > 0) {
+          fetch("/msg/{{ channel.id }}/send", {
+            method: "POST",
+            body: new URLSearchParams({ content })
+          }).then(() => {
+            contentField.value = "";
+          });
+        }
+      });
+
+      const events = new EventSource("/msg/{{ channel.id }}/events");
+
+      events.addEventListener("message", (ev) => {
+          const msg = JSON.parse(ev.data);
+          console.log(msg);
+          addMessage(msg);
+      });
+    </script>
+{% endblock main %}

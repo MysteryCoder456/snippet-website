@@ -1,5 +1,6 @@
 use rand::{distributions::Alphanumeric, Rng};
 use rocket::{
+    futures::future::join_all,
     http::Cookie,
     outcome::IntoOutcome,
     request::{FromRequest, Outcome, Request},
@@ -26,7 +27,7 @@ fn generate_hash(password: &str, salt: &str) -> String {
     hash
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct User {
     pub id: i32,
     pub username: String,
@@ -111,8 +112,33 @@ impl User {
         record.id
     }
 
-    pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {
+    pub async fn from_id(pool: &PgPool, id: i32, auth_details: bool) -> Option<Self> {
         let result = sqlx::query!("SELECT * FROM users WHERE id = $1", id)
+            .fetch_one(pool)
+            .await
+            .ok()?;
+
+        let (passwd, salt) = if auth_details {
+            (result.passwd, result.salt)
+        } else {
+            ("".to_owned(), "".to_owned())
+        };
+
+        Some(Self {
+            id: result.id,
+            username: result.username,
+            email: result.email,
+            password: passwd,
+            created_at: result.created_at.timestamp(),
+            salt,
+            bio: result.bio,
+            occupation: result.occupation,
+            avatar_path: result.avatar_path,
+        })
+    }
+
+    pub async fn from_username(pool: &PgPool, username: &str) -> Option<Self> {
+        let result = sqlx::query!("SELECT * FROM users WHERE username = $1", username)
             .fetch_one(pool)
             .await
             .ok()?;
@@ -200,6 +226,58 @@ impl User {
         .await
         .unwrap();
     }
+
+    pub async fn get_channels(&self, pool: &PgPool) -> Vec<Channel> {
+        let records = sqlx::query!(
+            r#"
+            SELECT * FROM channels
+            WHERE channels.id IN (
+                SELECT channel_id FROM channels_users
+                WHERE user_id = $1
+            )"#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        let mut channels = vec![];
+
+        // TODO: Perhaps use Channel::from_id function instead of this loop
+        for record in records {
+            let member_id_records = sqlx::query!(
+                r#"SELECT user_id FROM channels_users WHERE channel_id = $1"#,
+                record.id
+            )
+            .fetch_all(pool)
+            .await
+            .unwrap();
+
+            let member_fetch_futures = member_id_records
+                .iter()
+                .map(|r| User::from_id(pool, r.user_id, false));
+
+            let members = join_all(member_fetch_futures)
+                .await
+                .iter()
+                .filter_map(|u: &Option<_>| u.to_owned())
+                .collect::<Vec<_>>();
+
+            channels.push(Channel {
+                id: record.id,
+                name: record.name.clone(),
+                members,
+            });
+        }
+
+        channels
+    }
+}
+
+impl PartialEq for User {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 #[rocket::async_trait]
@@ -212,7 +290,9 @@ impl<'r> FromRequest<'r> for User {
 
         if let Some(auth_cookie) = cookie_jar.get_private("current_user") {
             let user_id = auth_cookie.value().parse::<i32>().unwrap();
-            Self::from_id(&db_state.pool, user_id).await.or_forward(())
+            Self::from_id(&db_state.pool, user_id, true)
+                .await
+                .or_forward(())
         } else {
             let post_login_cookie = Cookie::new("post_login_uri", req.uri().path().to_string());
             cookie_jar.add(post_login_cookie);
@@ -241,11 +321,12 @@ impl CodeSnippet {
         let mut snippets = Vec::<CodeSnippet>::new();
 
         for record in results {
-            let author: User = if let Some(user) = User::from_id(pool, record.author_id).await {
-                user
-            } else {
-                continue;
-            };
+            let author: User =
+                if let Some(user) = User::from_id(pool, record.author_id, false).await {
+                    user
+                } else {
+                    continue;
+                };
 
             snippets.push(CodeSnippet {
                 id: record.id,
@@ -269,7 +350,7 @@ impl CodeSnippet {
 
         Some(CodeSnippet {
             id: record.id,
-            author: User::from_id(pool, record.author_id).await?,
+            author: User::from_id(pool, record.author_id, false).await?,
             title: record.title,
             code: record.code,
             language: record.lang,
@@ -314,7 +395,7 @@ impl CodeSnippet {
         let mut comments = vec![];
 
         for record in results {
-            if let Some(author) = User::from_id(pool, record.author_id).await {
+            if let Some(author) = User::from_id(pool, record.author_id, false).await {
                 comments.push(Comment {
                     id: record.id,
                     code_snippet: self.clone(),
@@ -354,5 +435,143 @@ impl Comment {
         .await
         .unwrap()
         .id
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Message {
+    pub id: i32,
+    pub sender: User,
+    pub channel: Channel,
+    pub content: String,
+    pub sent_at: i64,
+}
+
+impl Message {
+    pub async fn create(pool: &PgPool, channel_id: i32, sender_id: i32, content: &str) -> i32 {
+        sqlx::query!(
+            r#"
+            INSERT INTO messages (channel_id, sender_id, content)
+            VALUES ($1, $2, $3)
+            RETURNING id
+            "#,
+            channel_id,
+            sender_id,
+            content
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap()
+        .id
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Channel {
+    pub id: i32,
+    pub name: String,
+    pub members: Vec<User>,
+}
+
+impl Channel {
+    pub async fn create(pool: &PgPool, name: &str, initial_member_ids: Vec<i32>) -> i32 {
+        // Create new channel
+        let record = sqlx::query!(
+            r#"INSERT INTO channels (name) VALUES ($1) RETURNING id"#,
+            name
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap();
+
+        // Add users to channel
+        for user_id in initial_member_ids {
+            let _ = sqlx::query!(
+                r#"INSERT INTO channels_users VALUES ($1, $2)"#,
+                record.id,
+                user_id
+            )
+            .execute(pool)
+            .await;
+        }
+
+        record.id
+    }
+
+    pub async fn from_id(pool: &PgPool, channel_id: i32) -> Option<Self> {
+        let record = sqlx::query!(
+            r#"
+            SELECT * FROM channels
+            WHERE id = $1
+            "#,
+            channel_id
+        )
+        .fetch_one(pool)
+        .await
+        .ok()?;
+
+        let member_id_records = sqlx::query!(
+            r#"SELECT user_id FROM channels_users WHERE channel_id = $1"#,
+            channel_id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        let member_fetch_futures = member_id_records
+            .iter()
+            .map(|r| User::from_id(pool, r.user_id, false));
+
+        let members = join_all(member_fetch_futures)
+            .await
+            .iter()
+            .filter_map(|u: &Option<_>| u.to_owned())
+            .collect::<Vec<_>>();
+
+        Some(Channel {
+            id: record.id,
+            name: record.name.clone(),
+            members,
+        })
+    }
+
+    pub async fn get_all_messages(&self, pool: &PgPool) -> Vec<Message> {
+        sqlx::query!(
+            r#"
+            SELECT
+                messages.id, messages.sender_id, messages.content, messages.sent_at,
+                users.username, users.email, users.created_at, users.bio, users.occupation, users.avatar_path
+            FROM messages
+            INNER JOIN users ON messages.sender_id = users.id
+            WHERE messages.channel_id = $1
+            ORDER BY sent_at ASC
+            "#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| {
+            let sender = User {
+                id: r.sender_id,
+                username: r.username.clone(),
+                email: r.email.clone(),
+                created_at: r.created_at.timestamp(),
+                bio: r.bio.clone(),
+                occupation: r.occupation.clone(),
+                avatar_path: r.avatar_path.clone(),
+                ..Default::default()
+            };
+
+            Message {
+                id: r.id,
+                sender,
+                channel: self.clone(),
+                content: r.content.clone(),
+                sent_at: r.sent_at.timestamp(),
+            }
+        })
+        .collect()
     }
 }

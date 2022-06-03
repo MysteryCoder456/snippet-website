@@ -1,17 +1,28 @@
 #[macro_use]
 extern crate rocket;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use piston_rs::{Client, Executor, File};
 use rocket::{
     form::{Context, Contextual, Error, Form},
     fs::FileServer,
     http::{Cookie, CookieJar},
     request::FlashMessage,
-    response::{Flash, Redirect},
-    routes, State,
+    response::{
+        stream::{Event, EventStream},
+        Flash, Redirect,
+    },
+    routes,
+    serde::json::{json, Value},
+    Shutdown, State,
 };
 use rocket_dyn_templates::Template;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use tokio::{
+    select,
+    sync::broadcast::{channel, error::RecvError, Sender},
+};
 use uuid::Uuid;
 
 mod contexts;
@@ -32,12 +43,11 @@ async fn index(
 ) -> Template {
     let pool = &db_state.pool;
     let snippets = models::CodeSnippet::query_all(pool).await;
-    let flash_msg = flash.map(|f| f.into_inner());
 
     let ctx = contexts::IndexContext {
         user,
         code_snippets: snippets,
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("home", ctx)
 }
@@ -101,7 +111,6 @@ async fn snippet_detail(
     let pool = &db_state.pool;
     let snippet = models::CodeSnippet::from_id(pool, id).await?;
     let comments = snippet.get_comments(pool).await;
-    let flash_msg = flash.map(|f| f.into_inner());
 
     let form_ctx = Context::default();
     let form = if user.is_some() {
@@ -115,7 +124,7 @@ async fn snippet_detail(
         snippet,
         comments,
         form,
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Some(Template::render("snippet_detail", &ctx))
 }
@@ -131,7 +140,7 @@ async fn add_comment_api(
 
     match form.value {
         Some(ref new_comment) => {
-            let new_comment_id =
+            let _new_comment_id =
                 models::Comment::create(pool, snippet_id, user.id, new_comment.content).await;
             // TODO - Focus on new comment when created
             Some(Ok(Redirect::to(uri!(snippet_detail(id = snippet_id)))))
@@ -171,6 +180,219 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
     Some(result)
 }
 
+#[get("/msg")]
+async fn channels_list(
+    db_state: &State<DBState>,
+    user: models::User,
+    flash: Option<FlashMessage<'_>>,
+) -> Template {
+    let pool = &db_state.pool;
+    let channels = user.get_channels(pool).await;
+
+    let ctx = contexts::ChannelsListContext {
+        user,
+        channels,
+        flash: flash.map(|f| f.into_inner()),
+    };
+    Template::render("channels_list", &ctx)
+}
+
+#[get("/msg", rank = 2)]
+fn channels_list_no_auth() -> Flash<Redirect> {
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to access your channels",
+    )
+}
+
+#[get("/msg/new")]
+fn add_channel(user: models::User, flash: Option<FlashMessage<'_>>) -> Template {
+    let ctx = contexts::AddChannelContext {
+        user,
+        form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
+    };
+    Template::render("add_channel", &ctx)
+}
+
+#[get("/msg/new", rank = 2)]
+fn add_channel_no_auth() -> Flash<Redirect> {
+    Flash::warning(
+        Redirect::to(uri!(login)),
+        "You must login to create new channels",
+    )
+}
+
+#[post("/msg/new", data = "<form>")]
+async fn add_channel_api(
+    db_state: &State<DBState>,
+    user: models::User,
+    form: Form<Contextual<'_, forms::NewChannelForm<'_>>>,
+) -> Result<Flash<Redirect>, Template> {
+    match form.value {
+        Some(ref new_channel) => {
+            let pool = &db_state.pool;
+            let mut initial_member_ids = vec![user.id];
+
+            if let Some(initial_members_split) = new_channel.initial_members.map(|m| m.split(",")) {
+                for username in initial_members_split {
+                    if let Some(u) = models::User::from_username(pool, username.trim()).await {
+                        // Prevent duplication of current user
+                        if user.id != u.id {
+                            initial_member_ids.push(u.id);
+                        }
+                    }
+                }
+            }
+
+            let new_channel_id =
+                models::Channel::create(pool, new_channel.name, initial_member_ids).await;
+            Ok(Flash::success(
+                Redirect::to(uri!(channel_messages(channel_id = new_channel_id))),
+                "Successfully created new channel!",
+            ))
+        }
+        None => {
+            let ctx = contexts::AddChannelContext {
+                user,
+                form: &form.context,
+                flash: None,
+            };
+            Err(Template::render("add_channel", &ctx))
+        }
+    }
+}
+
+#[get("/msg/<channel_id>")]
+async fn channel_messages(
+    channel_id: i32,
+    db_state: &State<DBState>,
+    user: models::User,
+    flash: Option<FlashMessage<'_>>,
+) -> Option<Template> {
+    let pool = &db_state.pool;
+    let channel = models::Channel::from_id(pool, channel_id).await?;
+    let messages = channel.get_all_messages(pool).await;
+
+    let ctx = contexts::ChannelMessagesContext {
+        user,
+        channel,
+        messages,
+        form: &Context::default(),
+        flash: flash.map(|f| f.into_inner()),
+    };
+    Some(Template::render("channel_messages", &ctx))
+}
+
+#[post("/msg/<channel_id>/send", data = "<form>")]
+async fn message_send_api(
+    channel_id: i32,
+    db_state: &State<DBState>,
+    user: models::User,
+    form: Form<Contextual<'_, forms::MessageSendForm<'_>>>,
+    queue: &State<Sender<models::Message>>,
+) -> Value {
+    match form.value {
+        Some(ref new_message) => {
+            let pool = &db_state.pool;
+            let channel = models::Channel::from_id(pool, channel_id).await;
+
+            if !channel.is_some() {
+                return json!({
+                    "status": 404,
+                    "message": "Channel not found!",
+                });
+            }
+
+            let channel = channel.unwrap();
+
+            if channel.members.contains(&user) {
+                let new_msg_id =
+                    models::Message::create(pool, channel.id, user.id, new_message.content).await;
+
+                // Clone user and remove sensitive details
+                let mut abstracted_user = user.clone();
+                abstracted_user.password = "".to_owned();
+                abstracted_user.salt = "".to_owned();
+
+                let res = queue.send(models::Message {
+                    id: new_msg_id,
+                    sender: abstracted_user,
+                    channel: channel.clone(),
+                    content: new_message.content.to_owned(),
+                    sent_at: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs() as i64,
+                });
+
+                match res {
+                    Ok(_) => json!({
+                        "status": 200,
+                        "message": "Successfully sent message",
+                        "message_id": new_msg_id,
+                        "channel_id": channel.id,
+                    }),
+                    Err(e) => json!({
+                        "status": 500,
+                        "message": format!("Message could not be sent: {}", e),
+                    }),
+                }
+            } else {
+                json!({
+                    "status": 403,
+                    "message": "User is not in channel",
+                })
+            }
+        }
+        None => json!({
+            "status": 400,
+            "message": "Please provide a 'content' field",
+        }),
+    }
+}
+
+#[get("/msg/<channel_id>/events")]
+async fn message_events(
+    channel_id: i32,
+    user: models::User,
+    db_state: &State<DBState>,
+    queue: &State<Sender<models::Message>>,
+    mut end: Shutdown,
+) -> Option<EventStream![]> {
+    let pool = &db_state.pool;
+    let channel = models::Channel::from_id(pool, channel_id).await?;
+
+    // Don't initiate event stream if user is not a member
+    if !channel.members.contains(&user) {
+        return None;
+    }
+
+    let mut rx = queue.subscribe();
+
+    Some(EventStream! {
+        loop {
+            let msg = select! {
+                msg = rx.recv() => match msg {
+                    Ok(msg) => {
+                        // Only send new message if it belongs to requested channel
+                        if msg.channel.id == channel.id {
+                            msg
+                        } else {
+                            continue
+                        }
+                    },
+                    Err(RecvError::Closed) => break,
+                    Err(RecvError::Lagged(_)) => continue,
+                },
+                _ = &mut end => break,
+            };
+
+            yield Event::json(&msg);
+        }
+    })
+}
+
 #[get("/profile/<user_id>")]
 async fn profile(
     user_id: i32,
@@ -179,7 +401,7 @@ async fn profile(
 ) -> Option<Template> {
     let pool = &db_state.pool;
 
-    let requested_user = models::User::from_id(pool, user_id).await?;
+    let requested_user = models::User::from_id(pool, user_id, false).await?;
     let avatar_image_url = requested_user.display_avatar_path();
     let first_snippet = requested_user.get_oldest_snippet(pool).await;
     let latest_snippet = requested_user.get_newest_snippet(pool).await;
@@ -374,11 +596,9 @@ async fn register_api(
 
 #[get("/login")]
 fn login(flash: Option<FlashMessage<'_>>) -> Template {
-    let flash_msg = flash.map(|f| f.into_inner());
-
     let ctx = contexts::LoginContext {
         form: &Context::default(),
-        flash: flash_msg,
+        flash: flash.map(|f| f.into_inner()),
     };
     Template::render("login", &ctx)
 }
@@ -455,7 +675,7 @@ async fn rocket() -> _ {
         if !std::path::Path::new(dir).exists() {
             match tokio::fs::create_dir_all(dir).await {
                 Ok(_) => println!("Created {} directory", dir),
-                Err(e) => println!("Unable to create directory {}:\n{}", dir, e),
+                Err(e) => eprintln!("Unable to create directory {}:\n{}", dir, e),
             }
         }
     }
@@ -470,6 +690,7 @@ async fn rocket() -> _ {
     rocket::build()
         .attach(Template::fairing())
         .manage(DBState { pool })
+        .manage(channel::<models::Message>(1024).0)
         .mount(
             "/",
             routes![
@@ -480,6 +701,14 @@ async fn rocket() -> _ {
                 snippet_detail,
                 add_comment_api,
                 snippet_run,
+                channels_list,
+                channels_list_no_auth,
+                channel_messages,
+                message_send_api,
+                message_events,
+                add_channel,
+                add_channel_no_auth,
+                add_channel_api,
                 profile,
                 edit_profile,
                 edit_profile_no_auth,
