@@ -112,19 +112,25 @@ impl User {
         record.id
     }
 
-    pub async fn from_id(pool: &PgPool, id: i32) -> Option<Self> {
+    pub async fn from_id(pool: &PgPool, id: i32, auth_details: bool) -> Option<Self> {
         let result = sqlx::query!("SELECT * FROM users WHERE id = $1", id)
             .fetch_one(pool)
             .await
             .ok()?;
 
+        let (passwd, salt) = if auth_details {
+            (result.passwd, result.salt)
+        } else {
+            ("".to_owned(), "".to_owned())
+        };
+
         Some(Self {
             id: result.id,
             username: result.username,
             email: result.email,
-            password: result.passwd,
+            password: passwd,
             created_at: result.created_at.timestamp(),
-            salt: result.salt,
+            salt,
             bio: result.bio,
             occupation: result.occupation,
             avatar_path: result.avatar_path,
@@ -249,7 +255,7 @@ impl User {
 
             let member_fetch_futures = member_id_records
                 .iter()
-                .map(|r| User::from_id(pool, r.user_id));
+                .map(|r| User::from_id(pool, r.user_id, false));
 
             let members = join_all(member_fetch_futures)
                 .await
@@ -284,7 +290,9 @@ impl<'r> FromRequest<'r> for User {
 
         if let Some(auth_cookie) = cookie_jar.get_private("current_user") {
             let user_id = auth_cookie.value().parse::<i32>().unwrap();
-            Self::from_id(&db_state.pool, user_id).await.or_forward(())
+            Self::from_id(&db_state.pool, user_id, true)
+                .await
+                .or_forward(())
         } else {
             let post_login_cookie = Cookie::new("post_login_uri", req.uri().path().to_string());
             cookie_jar.add(post_login_cookie);
@@ -313,11 +321,12 @@ impl CodeSnippet {
         let mut snippets = Vec::<CodeSnippet>::new();
 
         for record in results {
-            let author: User = if let Some(user) = User::from_id(pool, record.author_id).await {
-                user
-            } else {
-                continue;
-            };
+            let author: User =
+                if let Some(user) = User::from_id(pool, record.author_id, false).await {
+                    user
+                } else {
+                    continue;
+                };
 
             snippets.push(CodeSnippet {
                 id: record.id,
@@ -341,7 +350,7 @@ impl CodeSnippet {
 
         Some(CodeSnippet {
             id: record.id,
-            author: User::from_id(pool, record.author_id).await?,
+            author: User::from_id(pool, record.author_id, false).await?,
             title: record.title,
             code: record.code,
             language: record.lang,
@@ -386,7 +395,7 @@ impl CodeSnippet {
         let mut comments = vec![];
 
         for record in results {
-            if let Some(author) = User::from_id(pool, record.author_id).await {
+            if let Some(author) = User::from_id(pool, record.author_id, false).await {
                 comments.push(Comment {
                     id: record.id,
                     code_snippet: self.clone(),
@@ -511,7 +520,7 @@ impl Channel {
 
         let member_fetch_futures = member_id_records
             .iter()
-            .map(|r| User::from_id(pool, r.user_id));
+            .map(|r| User::from_id(pool, r.user_id, false));
 
         let members = join_all(member_fetch_futures)
             .await

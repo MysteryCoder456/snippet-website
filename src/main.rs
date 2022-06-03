@@ -315,7 +315,7 @@ async fn message_send_api(
                 abstracted_user.password = "".to_owned();
                 abstracted_user.salt = "".to_owned();
 
-                let _ = queue.send(models::Message {
+                let res = queue.send(models::Message {
                     id: new_msg_id,
                     sender: abstracted_user,
                     channel: channel.clone(),
@@ -326,12 +326,18 @@ async fn message_send_api(
                         .as_secs() as i64,
                 });
 
-                json!({
-                    "status": 200,
-                    "message": "Successfully sent message",
-                    "message_id": new_msg_id,
-                    "channel_id": channel.id,
-                })
+                match res {
+                    Ok(_) => json!({
+                        "status": 200,
+                        "message": "Successfully sent message",
+                        "message_id": new_msg_id,
+                        "channel_id": channel.id,
+                    }),
+                    Err(e) => json!({
+                        "status": 500,
+                        "message": format!("Message could not be sent: {}", e),
+                    }),
+                }
             } else {
                 json!({
                     "status": 403,
@@ -395,7 +401,7 @@ async fn profile(
 ) -> Option<Template> {
     let pool = &db_state.pool;
 
-    let requested_user = models::User::from_id(pool, user_id).await?;
+    let requested_user = models::User::from_id(pool, user_id, false).await?;
     let avatar_image_url = requested_user.display_avatar_path();
     let first_snippet = requested_user.get_oldest_snippet(pool).await;
     let latest_snippet = requested_user.get_newest_snippet(pool).await;
