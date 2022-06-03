@@ -310,9 +310,14 @@ async fn message_send_api(
                 let new_msg_id =
                     models::Message::create(pool, channel.id, user.id, new_message.content).await;
 
+                // Clone user and remove sensitive details
+                let mut abstracted_user = user.clone();
+                abstracted_user.password = "".to_owned();
+                abstracted_user.salt = "".to_owned();
+
                 let _ = queue.send(models::Message {
                     id: new_msg_id,
-                    sender: user.clone(),
+                    sender: abstracted_user,
                     channel: channel.clone(),
                     content: new_message.content.to_owned(),
                     sent_at: SystemTime::now()
@@ -364,6 +369,7 @@ async fn message_events(
             let msg = select! {
                 msg = rx.recv() => match msg {
                     Ok(msg) => {
+                        // Only send new message if it belongs to requested channel
                         if msg.channel.id == channel.id {
                             msg
                         } else {
