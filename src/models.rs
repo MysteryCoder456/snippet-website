@@ -118,7 +118,7 @@ impl User {
             .await
             .ok()?;
 
-        let (passwd, salt) = if auth_details {
+        let (password, salt) = if auth_details {
             (result.passwd, result.salt)
         } else {
             ("".to_owned(), "".to_owned())
@@ -128,7 +128,7 @@ impl User {
             id: result.id,
             username: result.username,
             email: result.email,
-            password: passwd,
+            password,
             created_at: result.created_at.timestamp(),
             salt,
             bio: result.bio,
