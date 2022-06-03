@@ -85,3 +85,7 @@ code {
 .channel a {
     color: #21252A;
 }
+
+#msg-template {
+    display: none;
+}
