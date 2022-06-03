@@ -23,7 +23,7 @@
       {% endfor %}
     </div>
 
-    <form action="/msg/{{ channel.id }}/send" method="POST" class="row me-1 mt-3">
+    <form action="/msg/{{ channel.id }}/send" method="POST" class="row me-1 mt-3" id="msgSendForm">
         <div class="col">
             {{ m::input(label="", type="text", name="content", placeholder="Message") }}
         </div>
@@ -32,4 +32,24 @@
             Send
         </button>
     </form>
+
+    <script>
+      let msgSendForm = document.querySelector("#msgSendForm");
+      let contentField = msgSendForm.querySelector("input[name='content']");
+
+      msgSendForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        let content = contentField.value;
+
+        if (content.length > 0) {
+          fetch("/msg/{{ channel.id }}/send", {
+            method: "POST",
+            body: new URLSearchParams({ content })
+          }).then(() => {
+            contentField.value = "";
+          });
+        }
+      });
+    </script>
 {% endblock main %}

@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate rocket;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use piston_rs::{Client, Executor, File};
 use rocket::{
     form::{Context, Contextual, Error, Form},
@@ -288,6 +290,7 @@ async fn message_send_api(
     db_state: &State<DBState>,
     user: models::User,
     form: Form<Contextual<'_, forms::MessageSendForm<'_>>>,
+    queue: &State<Sender<models::Message>>,
 ) -> Value {
     match form.value {
         Some(ref new_message) => {
@@ -306,6 +309,17 @@ async fn message_send_api(
             if channel.members.contains(&user) {
                 let new_msg_id =
                     models::Message::create(pool, channel.id, user.id, new_message.content).await;
+
+                let _ = queue.send(models::Message {
+                    id: new_msg_id,
+                    sender: user.clone(),
+                    channel: channel.clone(),
+                    content: new_message.content.to_owned(),
+                    sent_at: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs() as i64,
+                });
 
                 json!({
                     "status": 200,
