@@ -39,6 +39,13 @@
     </form>
 
     <script>
+      let scrolledToBottom = true;
+      window.scrollBy(0, document.body.scrollHeight);  // Scroll to bottom of page
+
+      window.onscroll = function(ev) {
+          scrolledToBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
+      };
+      
       const msgTemplate = document.querySelector("#msg-template");
       const messages = document.querySelector(".messages");
 
@@ -75,8 +82,11 @@
 
       events.addEventListener("message", (ev) => {
           const msg = JSON.parse(ev.data);
-          console.log(msg);
           addMessage(msg);
+
+          if (scrolledToBottom) {
+              window.scrollBy(0, document.body.scrollHeight);
+          }
       });
     </script>
 {% endblock main %}
