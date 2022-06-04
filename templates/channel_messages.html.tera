@@ -42,7 +42,7 @@
       let scrolledToBottom = true;
       window.scrollBy(0, document.body.scrollHeight);  // Scroll to bottom of page
 
-      window.onscroll = function(ev) {
+      window.onscroll = (ev) => {
           scrolledToBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
       };
       
@@ -59,7 +59,10 @@
           newMsg.querySelector(".msg-author").textContent = msg.sender.username;
           newMsg.querySelector(".msg-content").textContent = msg.content;
 
-          messages.appendChild(document.createElement("br"));
+          if (messages.children.length > 0) {
+              messages.appendChild(document.createElement("br"));
+          }
+
           messages.appendChild(newMsg);
       }
 
