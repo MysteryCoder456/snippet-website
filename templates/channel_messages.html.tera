@@ -30,7 +30,7 @@
 
     <form action="/msg/{{ channel.id }}/send" method="POST" class="row me-1 mt-3" id="msg-send-form">
         <div class="col">
-            {{ m::input(label="", type="text", name="content", placeholder="Message") }}
+            {{ m::input(label="", type="text", name="content", placeholder="Message", autocomplete="off") }}
         </div>
 
         <button class="btn btn-outline-primary col-1" type="submit">

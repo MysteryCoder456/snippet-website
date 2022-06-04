@@ -38,7 +38,7 @@
     </div>
 {% endmacro snippet %}
 
-{% macro input(type, label, name, value="", required=true, autofocus=true, placeholder="") %}
+{% macro input(type, label, name, value="", required=true, autofocus=true, placeholder="", autocomplete="on") %}
 
     {% if label %}
         <label for="id_{{ name | lower }}" class="form-label {% if required %} requiredField {% endif %}">
@@ -50,7 +50,7 @@
         <small class="text-muted">(Optional)</small>
     {% endif %}
 
-    <input type="{{ type }}" name="{{ name }}" {% if autofocus %} autofocus {% endif %} class="textinput textInput form-control {% if name in form.errors %} is-invalid {% endif %}" id="id_{{ name | lower }}" value="{% if type != 'password' %} {{- self::value_for(name=name, default=value) -}} {% endif %}" {% if required %} required {% endif %} placeholder="{{ placeholder }}">
+    <input type="{{ type }}" name="{{ name }}" {% if autofocus %} autofocus {% endif %} autocomplete="{{ autocomplete }}" class="textinput textInput form-control {% if name in form.errors %} is-invalid {% endif %}" id="id_{{ name | lower }}" value="{% if type != 'password' %} {{- self::value_for(name=name, default=value) -}} {% endif %}" {% if required %} required {% endif %} placeholder="{{ placeholder }}">
 
     {% if name in form.errors %}
         {{ self::errors_for(name=name) }}
