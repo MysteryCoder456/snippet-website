@@ -27,7 +27,10 @@
         </form>
     {% else %}
         <br>
-        <small class="text-muted">Login to post comments</small>
+        <small class="text-muted">
+            <a href="/login">Login</a>
+            to post comments
+        </small>
     {% endif %}
 
     {% if comments %}

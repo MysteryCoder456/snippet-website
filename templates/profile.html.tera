@@ -12,10 +12,12 @@
         <p><strong>Occupation:</strong> {{ requested_user.occupation }}</p>
         <p>{{ requested_user.bio }}</p>
 
-        {% if requested_user.id == user.id %}
-            <a href="/profile/edit" class="text-muted">
-                Edit
-            </a>
+        {% if user %}
+            {% if requested_user.id == user.id %}
+                <a href="/profile/edit" class="text-muted">
+                    Edit
+                </a>
+            {% endif %}
         {% endif %}
     </div>
 
