@@ -11,14 +11,12 @@ document.querySelectorAll(".comment").forEach((c) => {
 function runCode() {
     output.style.display = "block";
     output_inner.innerHTML = "Loading...";
-    
-    let xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-            output_inner.innerHTML = xmlHttp.responseText;
-        }
-    }
 
-    xmlHttp.open("GET", runUri, true);
-    xmlHttp.send(null);
+    fetch(runUri).then(resp => resp.text()).then(text => {
+        output_inner.innerHTML = text;
+    });
+}
+
+function likeSnippet() {
+    fetch(likeUri);
 }
