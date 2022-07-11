@@ -89,3 +89,12 @@ code {
 #msg-template {
     display: none;
 }
+
+#like-btn > svg {
+    fill: #dc3545;
+    transition: fill 0.15s ease-in-out;
+}
+
+#like-btn:hover > svg {
+    fill: white;
+}
