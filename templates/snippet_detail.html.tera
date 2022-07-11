@@ -7,6 +7,9 @@
 
 {% block main %}
     {{ m::snippet(s=snippet, link=false, top_border=false) }}
+    <p class="text-muted" style="margin: -5px 0px 5px 0px;">
+        {{ like_count }} like{%- if like_count != 1 -%}s{%- endif -%}
+    </p>
 
     <div class="mb-2">
         {% if user %}

@@ -86,7 +86,7 @@ async fn add_snippet_api(
 
             let snippet_id = models::CodeSnippet::create(pool, &user, title, language, code).await;
             Ok(Flash::success(
-                Redirect::to(uri!(snippet_detail(id = snippet_id))),
+                Redirect::to(uri!(snippet_detail(snippet_id = snippet_id))),
                 "Created new snippet!",
             ))
         }
@@ -101,15 +101,22 @@ async fn add_snippet_api(
     }
 }
 
-#[get("/snippet/<id>")]
+#[get("/snippet/<snippet_id>")]
 async fn snippet_detail(
-    id: i32,
+    snippet_id: i32,
     db_state: &State<DBState>,
     user: Option<models::User>,
     flash: Option<FlashMessage<'_>>,
 ) -> Option<Template> {
     let pool = &db_state.pool;
-    let snippet = models::CodeSnippet::from_id(pool, id).await?;
+    let snippet = models::CodeSnippet::from_id(pool, snippet_id).await?;
+
+    let liked = if let Some(ref u) = user {
+        Some(snippet.has_user_liked(pool, u.id).await)
+    } else {
+        None
+    };
+    let like_count = snippet.get_like_count(pool).await;
     let comments = snippet.get_comments(pool).await;
 
     let form_ctx = Context::default();
@@ -122,6 +129,8 @@ async fn snippet_detail(
     let ctx = contexts::SnippetDetailContext {
         user,
         snippet,
+        liked,
+        like_count,
         comments,
         form,
         flash: flash.map(|f| f.into_inner()),
@@ -143,15 +152,21 @@ async fn add_comment_api(
             let _new_comment_id =
                 models::Comment::create(pool, snippet_id, user.id, new_comment.content).await;
             // TODO - Focus on new comment when created
-            Some(Ok(Redirect::to(uri!(snippet_detail(id = snippet_id)))))
+            Some(Ok(Redirect::to(uri!(snippet_detail(
+                snippet_id = snippet_id
+            )))))
         }
         None => {
             let snippet = models::CodeSnippet::from_id(pool, snippet_id).await?;
+            let liked = snippet.has_user_liked(pool, user.id).await;
+            let like_count = snippet.get_like_count(pool).await;
             let comments = snippet.get_comments(pool).await;
 
             let ctx = contexts::SnippetDetailContext {
                 user: Some(user),
                 snippet,
+                liked: Some(liked),
+                like_count,
                 comments,
                 form: Some(&form.context),
                 flash: None,
@@ -161,10 +176,10 @@ async fn add_comment_api(
     }
 }
 
-#[get("/snippet/<id>/run")]
-async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
+#[get("/snippet/<snippet_id>/run")]
+async fn snippet_run(snippet_id: i32, db_state: &State<DBState>) -> Option<String> {
     let pool = &db_state.pool;
-    let snippet = models::CodeSnippet::from_id(pool, id).await?;
+    let snippet = models::CodeSnippet::from_id(pool, snippet_id).await?;
 
     let piston_client = Client::new();
     let executor = Executor::new()
@@ -178,6 +193,18 @@ async fn snippet_run(id: i32, db_state: &State<DBState>) -> Option<String> {
         None => response.run.output,
     };
     Some(result)
+}
+
+#[get("/snippet/<snippet_id>/like")]
+async fn snippet_like(
+    snippet_id: i32,
+    user: models::User,
+    db_state: &State<DBState>,
+) -> Option<Redirect> {
+    let pool = &db_state.pool;
+    let snippet = models::CodeSnippet::from_id(pool, snippet_id).await?;
+    snippet.add_like(pool, user.id).await;
+    Some(Redirect::to(uri!(snippet_detail(snippet_id = snippet_id))))
 }
 
 #[get("/msg")]
@@ -701,6 +728,7 @@ async fn rocket() -> _ {
                 snippet_detail,
                 add_comment_api,
                 snippet_run,
+                snippet_like,
                 channels_list,
                 channels_list_no_auth,
                 channel_messages,

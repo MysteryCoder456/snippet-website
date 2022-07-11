@@ -18,5 +18,5 @@ function runCode() {
 }
 
 function likeSnippet() {
-    fetch(likeUri);
+    fetch(likeUri).then(_ => window.location.assign(window.location.pathname));
 }

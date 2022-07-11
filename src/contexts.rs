@@ -32,6 +32,8 @@ pub struct AddSnippetContext<'a, 'b> {
 pub struct SnippetDetailContext<'a, 'b> {
     pub user: Option<models::User>,
     pub snippet: models::CodeSnippet,
+    pub liked: Option<bool>,
+    pub like_count: usize,
     pub comments: Vec<models::Comment>,
     pub form: Option<&'a Context<'b>>,
     pub flash: Option<(String, String)>,

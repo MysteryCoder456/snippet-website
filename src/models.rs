@@ -408,6 +408,34 @@ impl CodeSnippet {
 
         comments
     }
+
+    pub async fn get_like_count(&self, pool: &PgPool) -> usize {
+        sqlx::query!(
+            r#"SELECT liker_id FROM likes WHERE snippet_id = $1"#,
+            self.id
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+        .len()
+    }
+
+    pub async fn has_user_liked(&self, pool: &PgPool, user_id: i32) -> bool {
+        sqlx::query!(
+            r#"SELECT * FROM likes WHERE liker_id = $1 AND snippet_id = $2"#,
+            user_id,
+            self.id
+        )
+        .fetch_one(pool)
+        .await
+        .is_ok()
+    }
+
+    pub async fn add_like(&self, pool: &PgPool, user_id: i32) {
+        let _ = sqlx::query!(r#"INSERT INTO likes VALUES ($1, $2)"#, user_id, self.id)
+            .execute(pool)
+            .await;
+    }
 }
 
 #[derive(Serialize, Deserialize)]
