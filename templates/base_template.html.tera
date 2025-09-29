@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="/static/styles.css" />
 
     <!-- Umami Tracking -->
-    <script async src="https://umami.codeboi.dev/script.js"
+    <script async src="https://umami.rehatsingh.cv/script.js"
         data-website-id="a72a569d-a7ab-49b2-9d7c-5bb2fb08298c"></script>
 
     <title>{% block title %}{% endblock title %} - Snippet</title>
